@@ -284,7 +284,7 @@ function renderInvoiceList() {
         </div>
         <div class="badges">
           <span class="badge ${rs}">💰 ${statusLabel(rs)}</span>
-          <span class="badge ${inv.tension ? 'tension-yes' : 'tension-no'}">${inv.tension ? '⚠️ Tension' : '✅ No Tension'}</span>
+          <span class="badge ${inv.tension ? 'tension-yes' : 'tension-no'}">${inv.tension ? '⚠️ Issue' : '✅ No Issue'}</span>
         </div>
         <div class="row2"><span>Supplier</span><b>${escapeHtml(inv.supplier || '-')}</b></div>
         <div class="row2"><span>Customer</span><b>${escapeHtml(inv.customer || '-')}</b></div>
@@ -482,7 +482,7 @@ function openReport(type) {
     invoice: '🧾 Invoice-wise Status',
     package: '📦 Package-wise Status',
     daterange: '📅 Date Range Report',
-    tension: '⚠️ Tension / Pending Cases',
+    tension: '⚠️ Issue / Pending Cases',
     remittance: '💰 Remittance Pending',
     summary: '📈 Summary Dashboard'
   };
@@ -541,7 +541,7 @@ function renderReportBody() {
     const pending = total - completed;
     body.innerHTML = `
       <div class="card"><div class="row2"><span>மொத்த Invoices</span><b>${total}</b></div></div>
-      <div class="card"><div class="row2"><span>Tension Cases</span><b>${tension}</b></div></div>
+      <div class="card"><div class="row2"><span>Issue Cases</span><b>${tension}</b></div></div>
       <div class="card"><div class="row2"><span>Remittance Completed</span><b>${completed}</b></div></div>
       <div class="card"><div class="row2"><span>Remittance Pending</span><b>${pending}</b></div></div>
       <div class="card"><div class="row2"><span>மொத்த Invoice Value</span><b>${fmtMoney(totalAmt)}</b></div></div>
@@ -580,7 +580,7 @@ function renderReportBody() {
         </div>
         <div class="badges">
           <span class="badge ${rs}">💰 ${statusLabel(rs)}</span>
-          <span class="badge ${i.tension ? 'tension-yes' : 'tension-no'}">${i.tension ? '⚠️ Tension' : '✅ OK'}</span>
+          <span class="badge ${i.tension ? 'tension-yes' : 'tension-no'}">${i.tension ? '⚠️ Issue' : '✅ OK'}</span>
         </div>
         <div class="row2"><span>Supplier</span><b>${escapeHtml(i.supplier)}</b></div>
         <div class="row2"><span>Customer</span><b>${escapeHtml(i.customer)}</b></div>
@@ -597,7 +597,7 @@ function exportReportPDF() {
     invoice: 'Invoice-wise Status Report',
     package: 'Package-wise Status Report',
     daterange: 'Date Range Report',
-    tension: 'Tension / Pending Cases Report',
+    tension: 'Issue / Pending Cases Report',
     remittance: 'Remittance Pending Report',
     summary: 'Summary Dashboard'
   };
@@ -611,7 +611,7 @@ function exportReportPDF() {
     const list = Object.values(invoicesCache);
     const rows = [
       ['Total Invoices', String(list.length)],
-      ['Tension Cases', String(list.filter(i => i.tension).length)],
+      ['Issue Cases', String(list.filter(i => i.tension).length)],
       ['Remittance Completed', String(list.filter(i => remitStatus(i.total, i.advance, i.balance) === 'completed').length)],
       ['Remittance Pending', String(list.filter(i => remitStatus(i.total, i.advance, i.balance) !== 'completed').length)],
       ['Total Invoice Value', fmtMoney(list.reduce((s, i) => s + (Number(i.total) || 0), 0))],
@@ -631,7 +631,7 @@ function exportReportPDF() {
     ]);
     doc.autoTable({
       startY: 33,
-      head: [['Invoice', 'Date', 'Supplier', 'Customer', 'Remit', 'Tension', 'Total', 'Advance', 'Balance']],
+      head: [['Invoice', 'Date', 'Supplier', 'Customer', 'Remit', 'Issue', 'Total', 'Advance', 'Balance']],
       body: rows,
       styles: { fontSize: 7 }
     });
@@ -646,7 +646,7 @@ function exportReportExcel() {
     invoice: 'Invoice_Status',
     package: 'Package_Status',
     daterange: 'Date_Range',
-    tension: 'Tension_Cases',
+    tension: 'Issue_Cases',
     remittance: 'Remittance_Pending',
     summary: 'Summary'
   };
@@ -655,7 +655,7 @@ function exportReportExcel() {
     const list = Object.values(invoicesCache);
     rows = [
       { Metric: 'Total Invoices', Value: list.length },
-      { Metric: 'Tension Cases', Value: list.filter(i => i.tension).length },
+      { Metric: 'Issue Cases', Value: list.filter(i => i.tension).length },
       { Metric: 'Remittance Completed', Value: list.filter(i => remitStatus(i.total, i.advance, i.balance) === 'completed').length },
       { Metric: 'Remittance Pending', Value: list.filter(i => remitStatus(i.total, i.advance, i.balance) !== 'completed').length },
       { Metric: 'Total Invoice Value', Value: list.reduce((s, i) => s + (Number(i.total) || 0), 0) },
@@ -674,7 +674,7 @@ function exportReportExcel() {
       Advance: i.advance,
       Balance: i.balance,
       'Remittance Status': statusLabel(remitStatus(i.total, i.advance, i.balance)),
-      Tension: i.tension ? 'Yes' : 'No',
+      Issue: i.tension ? 'Yes' : 'No',
       'Added By': i.addedBy || '',
       Notes: i.notes || ''
     }));
