@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Import Reports</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f766e">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'Segoe UI',Roboto,Arial,sans-serif; background:#f1f5f4; color:#1a1a1a; padding-bottom:80px; }
+  .hidden { display:none !important; }
+
+  /* ---------- LOGIN ---------- */
+  #loginScreen { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(160deg,#0f766e,#134e4a); color:#fff; padding:24px; }
+  #loginScreen h1 { font-size:24px; margin-bottom:4px; }
+  #loginScreen p.sub { opacity:.8; margin-bottom:28px; font-size:13px; }
+  .pin-box { background:rgba(255,255,255,.08); border-radius:18px; padding:24px; width:100%; max-width:320px; }
+  .pin-display { display:flex; gap:10px; justify-content:center; margin-bottom:20px; }
+  .pin-dot { width:16px; height:16px; border-radius:50%; border:2px solid #fff; background:transparent; }
+  .pin-dot.filled { background:#fff; }
+  .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .pin-key { background:rgba(255,255,255,.12); border:none; color:#fff; font-size:20px; padding:16px 0; border-radius:12px; }
+  .pin-key:active { background:rgba(255,255,255,.3); }
+  .pin-key.empty { background:transparent; }
+  #loginErr { color:#fecaca; font-size:13px; text-align:center; margin-top:10px; height:16px; }
+  .user-card { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.25); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; color:#fff; font-size:15px; }
+  .user-card .av { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+  .add-user-card { background:transparent; border:1.5px dashed rgba(255,255,255,.4); border-radius:12px; padding:12px 16px; color:#fff; font-size:13px; text-align:center; opacity:.85; }
+
+  /* ---------- HEADER ---------- */
+  header { background:#0f766e; color:#fff; padding:16px 16px 14px; position:sticky; top:0; z-index:50; }
+  header .row { display:flex; justify-content:space-between; align-items:center; }
+  header h2 { font-size:18px; }
+  header .lock { background:rgba(255,255,255,.15); border:none; color:#fff; padding:6px 10px; border-radius:8px; font-size:12px; }
+  .summary-strip { display:flex; gap:8px; margin-top:12px; overflow-x:auto; padding-bottom:2px; }
+  .sum-card { background:rgba(255,255,255,.12); border-radius:10px; padding:8px 12px; min-width:84px; flex-shrink:0; }
+  .sum-card .n { font-size:18px; font-weight:700; }
+  .sum-card .l { font-size:10px; opacity:.85; }
+
+  /* ---------- TABS ---------- */
+  .tabbar { display:flex; background:#fff; position:sticky; top:0; z-index:40; border-bottom:1px solid #e2e8e7; overflow-x:auto; }
+  .tabbar button { flex:1; min-width:78px; padding:11px 6px; font-size:12px; background:none; border:none; color:#666; border-bottom:3px solid transparent; white-space:nowrap; }
+  .tabbar button.active { color:#0f766e; border-color:#0f766e; font-weight:600; }
+
+  /* ---------- CONTENT ---------- */
+  .content { padding:14px; }
+  .fab { position:fixed; bottom:22px; right:18px; background:#0f766e; color:#fff; width:56px; height:56px; border-radius:50%; border:none; font-size:28px; box-shadow:0 4px 14px rgba(0,0,0,.25); z-index:60; }
+
+  .card { background:#fff; border-radius:14px; padding:14px; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,.06); border-left:4px solid #cbd5d4; }
+  .card.tension { border-left-color:#dc2626; }
+  .card.ok { border-left-color:#16a34a; }
+  .card .top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+  .card .inv { font-weight:700; font-size:15px; color:#0f766e; }
+  .card .date { font-size:11px; color:#888; }
+  .badges { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
+  .badge { font-size:10.5px; padding:3px 9px; border-radius:20px; font-weight:600; }
+  .badge.pending { background:#fee2e2; color:#b91c1c; }
+  .badge.partial { background:#fef3c7; color:#92400e; }
+  .badge.completed { background:#dcfce7; color:#166534; }
+  .badge.tension-yes { background:#fee2e2; color:#b91c1c; }
+  .badge.tension-no { background:#e0f2f1; color:#0f766e; }
+  .row2 { display:flex; justify-content:space-between; font-size:13px; color:#444; margin:3px 0; }
+  .row2 b { color:#1a1a1a; }
+  .card .actions { display:flex; gap:8px; margin-top:10px; }
+  .card .actions button { flex:1; padding:7px 0; font-size:12px; border-radius:8px; border:1px solid #ddd; background:#fafafa; color:#333; }
+  .card .actions button.danger { color:#dc2626; border-color:#fecaca; }
+
+  .empty { text-align:center; color:#999; padding:60px 20px; font-size:13px; }
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; display:flex; align-items:flex-end; }
+  .modal-sheet { background:#fff; width:100%; max-height:92vh; overflow-y:auto; border-radius:20px 20px 0 0; padding:18px 18px 30px; }
+  .modal-sheet h3 { margin-bottom:14px; color:#0f766e; }
+  .field { margin-bottom:14px; }
+  .field label { font-size:12px; color:#666; display:block; margin-bottom:5px; font-weight:600; }
+  .field input, .field select, .field textarea { width:100%; padding:11px; border:1px solid #ddd; border-radius:10px; font-size:14px; background:#fbfbfb; }
+  .field textarea { resize:vertical; min-height:60px; }
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; background:#f6f6f6; padding:10px 12px; border-radius:10px; margin-bottom:14px; }
+  .toggle-row span { font-size:13px; font-weight:600; }
+  .switch { position:relative; width:46px; height:26px; }
+  .switch input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; inset:0; background:#ccc; border-radius:26px; transition:.2s; cursor:pointer; }
+  .slider:before { content:''; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  input:checked + .slider { background:#0f766e; }
+  input:checked + .slider:before { transform:translateX(20px); }
+  .two-col { display:flex; gap:10px; }
+  .two-col .field { flex:1; }
+  .btn-primary { width:100%; background:#0f766e; color:#fff; border:none; padding:13px; border-radius:12px; font-size:15px; font-weight:600; margin-top:6px; }
+  .btn-secondary { width:100%; background:#f1f1f1; color:#444; border:none; padding:12px; border-radius:12px; font-size:14px; margin-top:8px; }
+  .close-x { position:absolute; right:18px; top:16px; background:#f1f1f1; border:none; width:30px; height:30px; border-radius:50%; font-size:16px; }
+  .modal-sheet { position:relative; }
+  .balance-hint { font-size:11px; color:#888; margin-top:-8px; margin-bottom:10px; }
+
+  /* ---------- REPORTS TAB ---------- */
+  .report-btn { display:flex; align-items:center; gap:12px; background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; border:1px solid #e8eceb; }
+  .report-btn .ic { font-size:22px; }
+  .report-btn .txt b { display:block; font-size:14px; }
+  .report-btn .txt span { font-size:11px; color:#888; }
+  .report-btn { width:100%; text-align:left; }
+  .filter-bar { display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; }
+  .filter-chip { padding:7px 14px; border-radius:20px; background:#fff; border:1px solid #ddd; font-size:12px; white-space:nowrap; }
+  .filter-chip.active { background:#0f766e; color:#fff; border-color:#0f766e; }
+
+  #toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#1a1a1a; color:#fff; padding:10px 20px; border-radius:20px; font-size:13px; z-index:200; opacity:0; transition:.3s; }
+  #toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <h1>📦 Import Reports</h1>
+  <p class="sub">Sri Veeramathi Amman & Sri Muniyappan Kovil</p>
+
+  <!-- STEP 1: choose user -->
+  <div class="pin-box" id="userSelectBox">
+    <div id="userListWrap" style="display:flex;flex-direction:column;gap:10px;margin-bottom:6px;"></div>
+    <div id="userListLoading" style="text-align:center;opacity:.8;font-size:13px;padding:10px;">Loading users...</div>
+  </div>
+
+  <!-- STEP 2: enter PIN -->
+  <div class="pin-box hidden" id="pinEntryBox">
+    <div style="text-align:center;margin-bottom:10px;font-size:15px;" id="pinEntryName"></div>
+    <div class="pin-display" id="pinDisplay"></div>
+    <div class="pin-pad" id="pinPad"></div>
+    <div id="loginErr"></div>
+    <button class="btn-secondary" style="margin-top:14px;" onclick="backToUserSelect()">⬅ Back</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden">
+  <header>
+    <div class="row">
+      <h2>📦 Import Reports</h2>
+      <button class="lock" onclick="lockApp()">🔒 Lock</button>
+    </div>
+    <div class="summary-strip">
+      <div class="sum-card"><div class="n" id="sTotal">0</div><div class="l">Total Invoice</div></div>
+      <div class="sum-card"><div class="n" id="sTension">0</div><div class="l">Tension</div></div>
+      <div class="sum-card"><div class="n" id="sPending">0</div><div class="l">Remit Pending</div></div>
+      <div class="sum-card"><div class="n" id="sCompleted">0</div><div class="l">Completed</div></div>
+    </div>
+  </header>
+
+  <div class="tabbar">
+    <button class="tab-btn active" data-tab="list" onclick="switchTab('list')">📋 Invoices</button>
+    <button class="tab-btn" data-tab="reports" onclick="switchTab('reports')">📊 Reports</button>
+    <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
+  </div>
+
+  <div class="content">
+    <!-- LIST TAB -->
+    <div id="tab-list">
+      <div class="filter-bar" id="listFilterBar">
+        <button class="filter-chip active" data-f="all" onclick="setListFilter('all')">அனைத்தும்</button>
+        <button class="filter-chip" data-f="tension" onclick="setListFilter('tension')">⚠️ Tension</button>
+        <button class="filter-chip" data-f="pending" onclick="setListFilter('pending')">💰 Pending</button>
+        <button class="filter-chip" data-f="completed" onclick="setListFilter('completed')">✅ Completed</button>
+      </div>
+      <div id="invoiceList"></div>
+    </div>
+
+    <!-- REPORTS TAB -->
+    <div id="tab-reports" class="hidden">
+      <button class="report-btn" onclick="openReport('invoice')">
+        <span class="ic">🧾</span>
+        <span class="txt"><b>Invoice-wise Status</b><span>எல்லா invoice status full list</span></span>
+      </button>
+      <button class="report-btn" onclick="openReport('package')">
+        <span class="ic">📦</span>
+        <span class="txt"><b>Package-wise Status</b><span>Package details வாரியாக</span></span>
+      </button>
+      <button class="report-btn" onclick="openReport('daterange')">
+        <span class="ic">📅</span>
+        <span class="txt"><b>Date Range Report</b><span>குறிப்பிட்ட காலத்துல invoices</span></span>
+      </button>
+      <button class="report-btn" onclick="openReport('tension')">
+        <span class="ic">⚠️</span>
+        <span class="txt"><b>Tension/Pending Cases</b><span>Tension mark செஞ்சவை மட்டும்</span></span>
+      </button>
+      <button class="report-btn" onclick="openReport('remittance')">
+        <span class="ic">💰</span>
+        <span class="txt"><b>Remittance Pending</b><span>Advance/Balance நிலுவை</span></span>
+      </button>
+      <button class="report-btn" onclick="openReport('summary')">
+        <span class="ic">📈</span>
+        <span class="txt"><b>Summary Dashboard</b><span>மொத்த totals ஒரே பார்வையில்</span></span>
+      </button>
+    </div>
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" class="hidden">
+      <h3 style="margin-bottom:10px;color:#0f766e;">👥 Users</h3>
+      <div id="settingsUserList"></div>
+      <button class="btn-secondary" onclick="openAddUserModal()">+ Add User</button>
+
+      <h3 style="margin:22px 0 10px;color:#0f766e;">💾 Data Backup</h3>
+      <div class="report-btn" style="cursor:pointer;" onclick="exportJSONBackup()">
+        <span class="ic">⬇️</span>
+        <span class="txt"><b>Download Full Backup (JSON)</b><span>எல்லா invoice data-வையும் ஒரு file-ஆ save பண்ணலாம்</span></span>
+      </div>
+      <p style="font-size:11.5px;color:#888;margin-top:6px;line-height:1.5;">Firebase project delete பண்ணுறதுக்கு முன்னாடி, இந்த backup-ஐ எடுத்து phone-ல save பண்ணிக்கோங்க. இந்த file-ஐ வச்சு புதுசா எந்த Firebase project-லயும் data restore பண்ணிக்கலாம்.</p>
+
+      <h3 style="margin:22px 0 10px;color:#0f766e;">App Info</h3>
+      <p style="font-size:12px;color:#888;">Import Reports v1.0 · reports.sramesh.in</p>
+    </div>
+  </div>
+
+  <button class="fab" id="fabAdd" onclick="openInvoiceModal()">+</button>
+</div>
+
+<!-- ADD USER MODAL -->
+<div id="addUserModalOverlay" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <button class="close-x" onclick="closeAddUserModal()">✕</button>
+    <h3>புது User Add</h3>
+    <div class="field">
+      <label>Name *</label>
+      <input type="text" id="au_name" placeholder="e.g. Ramesh">
+    </div>
+    <div class="field">
+      <label>4-digit PIN *</label>
+      <input type="number" id="au_pin" placeholder="1234" maxlength="4" inputmode="numeric">
+    </div>
+    <button class="btn-primary" onclick="saveNewUser()">Save User</button>
+    <button class="btn-secondary" onclick="closeAddUserModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ADD/EDIT INVOICE MODAL -->
+<div id="invoiceModalOverlay" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <button class="close-x" onclick="closeInvoiceModal()">✕</button>
+    <h3 id="modalTitle">புது Invoice</h3>
+
+    <div class="field">
+      <label>Commercial Invoice Number *</label>
+      <input type="text" id="f_invno" placeholder="e.g. CI-2026-0042">
+    </div>
+    <div class="field">
+      <label>Invoice Date</label>
+      <input type="date" id="f_date">
+    </div>
+    <div class="field">
+      <label>Supplier Details *</label>
+      <input type="text" id="f_supplier" placeholder="Supplier name / company">
+    </div>
+    <div class="field">
+      <label>Sales பண்ணின Company (Customer) *</label>
+      <input type="text" id="f_customer" placeholder="Customer / company name">
+    </div>
+    <div class="field">
+      <label>Package Details *</label>
+      <textarea id="f_package" placeholder="Item description, qty, packages etc."></textarea>
+    </div>
+
+    <div class="field">
+      <label>Total Invoice Amount</label>
+      <input type="number" id="f_total" placeholder="0.00" inputmode="decimal">
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>Advance Received</label>
+        <input type="number" id="f_advance" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
+      </div>
+      <div class="field">
+        <label>Balance Amount</label>
+        <input type="number" id="f_balance" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
+      </div>
+    </div>
+    <div class="balance-hint" id="balanceHint"></div>
+
+    <div class="toggle-row">
+      <span>⚠️ Tension / Pending issue?</span>
+      <label class="switch"><input type="checkbox" id="f_tension"><span class="slider"></span></label>
+    </div>
+
+    <div class="field">
+      <label>Notes (optional)</label>
+      <textarea id="f_notes" placeholder="ஏதேனும் குறிப்பு..."></textarea>
+    </div>
+
+    <button class="btn-primary" onclick="saveInvoice()">Save Invoice</button>
+    <button class="btn-secondary" onclick="closeInvoiceModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- REPORT VIEW MODAL -->
+<div id="reportModalOverlay" class="modal-overlay hidden">
+  <div class="modal-sheet" style="max-height:95vh;">
+    <button class="close-x" onclick="closeReportModal()">✕</button>
+    <h3 id="reportTitle">Report</h3>
+    <div id="reportDateFilter" class="two-col hidden" style="margin-bottom:10px;">
+      <div class="field"><label>From</label><input type="date" id="rep_from"></div>
+      <div class="field"><label>To</label><input type="date" id="rep_to"></div>
+    </div>
+    <button class="btn-secondary hidden" id="rep_applyDate" onclick="renderReportBody()">Apply Filter</button>
+    <div id="reportBody"></div>
+    <button class="btn-primary" onclick="exportReportPDF()">📄 Download PDF</button>
+    <button class="btn-secondary" onclick="exportReportExcel()">📊 Download Excel</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+}
+</script>
+</body>
+</html>
