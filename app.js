@@ -108,7 +108,7 @@ function verifyPin() {
     sessionStorage_set();
     doFirebaseSignInAndEnterApp();
   } else {
-    document.getElementById('loginErr').textContent = 'தவறான PIN, மீண்டும் முயற்சிக்கவும்';
+    document.getElementById('loginErr').textContent = 'Wrong PIN, please try again';
     enteredPin = '';
     renderPinDots();
   }
@@ -122,7 +122,7 @@ function renderUserList() {
   wrap.innerHTML = '';
   const ids = Object.keys(usersCache);
   if (ids.length === 0) {
-    loading.textContent = 'User இல்ல. முதலில் Firebase-ல user create பண்ணணும்.';
+    loading.textContent = 'No users found. Please create a user in Firebase first.';
     return;
   }
   loading.classList.add('hidden');
@@ -268,7 +268,7 @@ function renderInvoiceList() {
   const wrap = document.getElementById('invoiceList');
   const entries = getFilteredInvoices();
   if (entries.length === 0) {
-    wrap.innerHTML = '<div class="empty">📭 இன்னும் Invoice எதுவும் இல்ல.<br>கீழ உள்ள + பட்டனை அழுத்தி ஒன்னு add பண்ணுங்க.</div>';
+    wrap.innerHTML = '<div class="empty">📭 No invoices yet.<br>Tap the + button below to add one.</div>';
     return;
   }
   wrap.innerHTML = entries.map(([id, inv]) => {
@@ -312,7 +312,7 @@ function truncate(s, n) {
 /* ====================== ADD/EDIT INVOICE MODAL ====================== */
 function openInvoiceModal(id) {
   editingInvoiceId = id || null;
-  document.getElementById('modalTitle').textContent = id ? 'Invoice Edit' : 'புது Invoice';
+  document.getElementById('modalTitle').textContent = id ? 'Invoice Edit' : 'New Invoice';
   if (id && invoicesCache[id]) {
     const inv = invoicesCache[id];
     document.getElementById('f_invno').value = inv.invNo || '';
@@ -368,11 +368,11 @@ function saveInvoice() {
   const remitType = document.getElementById('f_remitType').value;
   const remitThirdParty = document.getElementById('f_remitThirdParty').value.trim();
   if (!invNo || !supplier || !customer || !pkg) {
-    toast('⚠️ Invoice No, Supplier, Customer, Package — இவை அனைத்தும் fill பண்ணணும்');
+    toast('⚠️ Please fill Invoice No, Supplier, Customer, and Package');
     return;
   }
   if (remitType === '3rdparty' && !remitThirdParty) {
-    toast('⚠️ 3rd Party Name கொடுங்க');
+    toast('⚠️ Please enter 3rd Party Name');
     return;
   }
   const data = {
@@ -394,19 +394,19 @@ function saveInvoice() {
   if (!editingInvoiceId) data.createdAt = Date.now();
   if (editingInvoiceId) {
     db.ref(ROOT + '/invoices/' + editingInvoiceId).update(data).then(() => {
-      toast('✅ Invoice update ஆச்சு');
+      toast('✅ Invoice updated');
       closeInvoiceModal();
     }).catch(err => toast('Error: ' + err.message));
   } else {
     db.ref(ROOT + '/invoices').push(data).then(() => {
-      toast('✅ Invoice save ஆச்சு');
+      toast('✅ Invoice saved');
       closeInvoiceModal();
     }).catch(err => toast('Error: ' + err.message));
   }
 }
 function deleteInvoice(id) {
-  if (!confirm('இந்த Invoice-ஐ delete பண்றதா? இது permanent.')) return;
-  db.ref(ROOT + '/invoices/' + id).remove().then(() => toast('🗑️ Delete ஆச்சு'));
+  if (!confirm('Delete this invoice? This is permanent.')) return;
+  db.ref(ROOT + '/invoices/' + id).remove().then(() => toast('🗑️ Deleted'));
 }
 
 /* ====================== SETTINGS: USERS ====================== */
@@ -417,7 +417,7 @@ function renderSettingsUserList() {
     const wrap = document.getElementById('settingsUserList');
     const ids = Object.keys(users);
     if (ids.length === 0) {
-      wrap.innerHTML = '<p style="font-size:12px;color:#888;">User இல்ல</p>';
+      wrap.innerHTML = '<p style="font-size:12px;color:#888;">No users found</p>';
       return;
     }
     wrap.innerHTML = ids.map(uid => {
@@ -429,7 +429,7 @@ function renderSettingsUserList() {
             <span style="font-size:14px;font-weight:600;">${escapeHtml(u.name)}</span>
           </div>
           <div style="display:flex;gap:6px;">
-            <button onclick="editUserPin('${uid}','${escapeHtml(u.name)}')" style="border:1px solid #ddd;background:#fafafa;border-radius:8px;padding:6px 10px;font-size:11px;">PIN மாற்று</button>
+            <button onclick="editUserPin('${uid}','${escapeHtml(u.name)}')" style="border:1px solid #ddd;background:#fafafa;border-radius:8px;padding:6px 10px;font-size:11px;">Change PIN</button>
             <button onclick="deleteUser('${uid}')" style="border:1px solid #fecaca;color:#dc2626;background:#fff;border-radius:8px;padding:6px 10px;font-size:11px;">Remove</button>
           </div>
         </div>`;
@@ -448,31 +448,31 @@ function saveNewUser() {
   const name = document.getElementById('au_name').value.trim();
   const pin = document.getElementById('au_pin').value.trim();
   if (!name || !/^\d{4}$/.test(pin)) {
-    toast('⚠️ பேரும், 4-digit PIN-ம் சரியா கொடுங்க');
+    toast('⚠️ Please enter a name and a valid 4-digit PIN');
     return;
   }
   db.ref(ROOT + '/users').push({ name, pin }).then(() => {
-    toast('✅ User add ஆச்சு');
+    toast('✅ User added');
     closeAddUserModal();
     renderSettingsUserList();
   });
 }
 function editUserPin(uid, name) {
-  const newPin = prompt(name + ' க்கான புது 4-digit PIN:');
+  const newPin = prompt('New 4-digit PIN for ' + name + ':');
   if (newPin === null) return;
-  if (!/^\d{4}$/.test(newPin)) { toast('⚠️ 4-digit PIN கொடுங்க'); return; }
+  if (!/^\d{4}$/.test(newPin)) { toast('⚠️ Please enter a 4-digit PIN'); return; }
   db.ref(ROOT + '/users/' + uid + '/pin').set(newPin).then(() => {
-    toast('✅ PIN மாறிடுச்சு');
+    toast('✅ PIN updated');
   });
 }
 function deleteUser(uid) {
   if (Object.keys(usersCache).length <= 1) {
-    toast('⚠️ கடைசி user-ஐ remove பண்ண முடியாது');
+    toast('⚠️ Cannot remove the last user');
     return;
   }
-  if (!confirm('இந்த user-ஐ remove பண்றதா?')) return;
+  if (!confirm('Remove this user?')) return;
   db.ref(ROOT + '/users/' + uid).remove().then(() => {
-    toast('🗑️ User remove ஆச்சு');
+    toast('🗑️ User removed');
     renderSettingsUserList();
   });
 }
@@ -490,7 +490,7 @@ function exportJSONBackup() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast('⬇️ Backup download ஆச்சு');
+    toast('⬇️ Backup downloaded');
   }).catch(err => toast('Error: ' + err.message));
 }
 
@@ -559,19 +559,19 @@ function renderReportBody() {
     const completed = list.filter(i => remitStatus(i.total, i.advance, i.balance) === 'completed').length;
     const pending = total - completed;
     body.innerHTML = `
-      <div class="card"><div class="row2"><span>மொத்த Invoices</span><b>${total}</b></div></div>
+      <div class="card"><div class="row2"><span>Total Invoices</span><b>${total}</b></div></div>
       <div class="card"><div class="row2"><span>Issue Cases</span><b>${tension}</b></div></div>
       <div class="card"><div class="row2"><span>Remittance Completed</span><b>${completed}</b></div></div>
       <div class="card"><div class="row2"><span>Remittance Pending</span><b>${pending}</b></div></div>
-      <div class="card"><div class="row2"><span>மொத்த Invoice Value</span><b>${fmtMoney(totalAmt)}</b></div></div>
-      <div class="card"><div class="row2"><span>மொத்த Advance வந்தது</span><b>${fmtMoney(advAmt)}</b></div></div>
-      <div class="card"><div class="row2"><span>மொத்த Balance நிலுவை</span><b>${fmtMoney(balAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>Total Invoice Value</span><b>${fmtMoney(totalAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>Total Advance Received</span><b>${fmtMoney(advAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>Total Balance Due</span><b>${fmtMoney(balAmt)}</b></div></div>
     `;
     return;
   }
 
   if (entries.length === 0) {
-    body.innerHTML = '<div class="empty">இந்த report-க்கு data இல்ல</div>';
+    body.innerHTML = '<div class="empty">No data for this report</div>';
     return;
   }
 
@@ -658,7 +658,7 @@ function exportReportPDF() {
     });
   }
   doc.save((titleMap[currentReportType] || 'report').replace(/\s+/g, '_') + '_' + todayISO() + '.pdf');
-  toast('📄 PDF download ஆச்சு');
+  toast('📄 PDF downloaded');
 }
 
 /* ====================== EXPORT: EXCEL ====================== */
@@ -706,7 +706,7 @@ function exportReportExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report');
   XLSX.writeFile(wb, (titleMap[currentReportType] || 'report') + '_' + todayISO() + '.xlsx');
-  toast('📊 Excel download ஆச்சு');
+  toast('📊 Excel downloaded');
 }
 
 /* ====================== INIT ====================== */
