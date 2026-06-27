@@ -275,21 +275,42 @@
       <textarea id="f_package" placeholder="Item description, qty, packages etc."></textarea>
     </div>
 
-    <div class="field">
-      <label>Total Invoice Amount</label>
-      <input type="number" id="f_total" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
-    </div>
+    <p style="font-size:11px;color:#6b6557;margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">💵 Total Invoice Amount</p>
     <div class="two-col">
       <div class="field">
-        <label>Advance Received</label>
-        <input type="number" id="f_advance" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
+        <label>USD</label>
+        <input type="number" id="f_total_usd" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
       </div>
       <div class="field">
-        <label>Balance Amount</label>
-        <input type="number" id="f_balance" placeholder="0.00" inputmode="decimal" oninput="showBalanceHint()">
+        <label>INR</label>
+        <input type="number" id="f_total_inr" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
       </div>
     </div>
-    <p style="font-size:11px;color:#6b6557;margin-top:-10px;margin-bottom:6px;">Auto-calculated as Total − Advance. Edit manually if needed.</p>
+
+    <p style="font-size:11px;color:#6b6557;margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">💰 Advance Received</p>
+    <div class="two-col">
+      <div class="field">
+        <label>USD</label>
+        <input type="number" id="f_advance_usd" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
+      </div>
+      <div class="field">
+        <label>INR</label>
+        <input type="number" id="f_advance_inr" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
+      </div>
+    </div>
+
+    <p style="font-size:11px;color:#6b6557;margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">🧾 Balance Amount</p>
+    <div class="two-col">
+      <div class="field">
+        <label>USD</label>
+        <input type="number" id="f_balance_usd" placeholder="0.00" inputmode="decimal" oninput="showBalanceHint()">
+      </div>
+      <div class="field">
+        <label>INR</label>
+        <input type="number" id="f_balance_inr" placeholder="0.00" inputmode="decimal" oninput="showBalanceHint()">
+      </div>
+    </div>
+    <p style="font-size:11px;color:#6b6557;margin-top:6px;margin-bottom:6px;">Balance auto-calculated as Total − Advance (per currency). Edit manually if needed.</p>
     <div class="balance-hint" id="balanceHint"></div>
 
     <div class="field">
