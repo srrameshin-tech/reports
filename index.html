@@ -277,7 +277,7 @@
 
     <div class="field">
       <label>Total Invoice Amount</label>
-      <input type="number" id="f_total" placeholder="0.00" inputmode="decimal">
+      <input type="number" id="f_total" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
     </div>
     <div class="two-col">
       <div class="field">
@@ -286,9 +286,10 @@
       </div>
       <div class="field">
         <label>Balance Amount</label>
-        <input type="number" id="f_balance" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
+        <input type="number" id="f_balance" placeholder="0.00" inputmode="decimal" oninput="showBalanceHint()">
       </div>
     </div>
+    <p style="font-size:11px;color:#6b6557;margin-top:-10px;margin-bottom:6px;">Auto-calculated as Total − Advance. Edit manually if needed.</p>
     <div class="balance-hint" id="balanceHint"></div>
 
     <div class="field">
