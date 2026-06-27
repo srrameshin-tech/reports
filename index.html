@@ -43,7 +43,7 @@
 
   /* ---------- TABS ---------- */
   .tabbar { display:flex; background:#fff; position:sticky; top:0; z-index:40; border-bottom:1px solid #e2e8e7; overflow-x:auto; }
-  .tabbar button { flex:1; min-width:78px; padding:11px 6px; font-size:12px; background:none; border:none; color:#666; border-bottom:3px solid transparent; white-space:nowrap; }
+  .tabbar button { flex:1; min-width:78px; padding:11px 6px; font-size:12px; background:none; border:none; color:#333; border-bottom:3px solid transparent; white-space:nowrap; font-weight:500; }
   .tabbar button.active { color:#0f766e; border-color:#0f766e; font-weight:600; }
 
   /* ---------- CONTENT ---------- */
@@ -55,7 +55,7 @@
   .card.ok { border-left-color:#16a34a; }
   .card .top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
   .card .inv { font-weight:700; font-size:15px; color:#0f766e; }
-  .card .date { font-size:11px; color:#888; }
+  .card .date { font-size:11px; color:#555; font-weight:500; }
   .badges { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
   .badge { font-size:10.5px; padding:3px 9px; border-radius:20px; font-weight:600; }
   .badge.pending { background:#fee2e2; color:#b91c1c; }
@@ -63,20 +63,21 @@
   .badge.completed { background:#dcfce7; color:#166534; }
   .badge.tension-yes { background:#fee2e2; color:#b91c1c; }
   .badge.tension-no { background:#e0f2f1; color:#0f766e; }
-  .row2 { display:flex; justify-content:space-between; font-size:13px; color:#444; margin:3px 0; }
+  .row2 { display:flex; justify-content:space-between; font-size:13px; color:#222; margin:3px 0; }
+  .row2 span:first-child { color:#444; }
   .row2 b { color:#1a1a1a; }
   .card .actions { display:flex; gap:8px; margin-top:10px; }
   .card .actions button { flex:1; padding:7px 0; font-size:12px; border-radius:8px; border:1px solid #ddd; background:#fafafa; color:#333; }
   .card .actions button.danger { color:#dc2626; border-color:#fecaca; }
 
-  .empty { text-align:center; color:#999; padding:60px 20px; font-size:13px; }
+  .empty { text-align:center; color:#555; padding:60px 20px; font-size:13px; font-weight:500; }
 
   /* ---------- MODAL ---------- */
   .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; display:flex; align-items:flex-end; }
   .modal-sheet { background:#fff; width:100%; max-height:92vh; overflow-y:auto; border-radius:20px 20px 0 0; padding:18px 18px 30px; }
   .modal-sheet h3 { margin-bottom:14px; color:#0f766e; }
   .field { margin-bottom:14px; }
-  .field label { font-size:12px; color:#666; display:block; margin-bottom:5px; font-weight:600; }
+  .field label { font-size:12px; color:#333; display:block; margin-bottom:5px; font-weight:700; }
   .field input, .field select, .field textarea { width:100%; padding:11px; border:1px solid #ddd; border-radius:10px; font-size:14px; background:#fbfbfb; }
   .field textarea { resize:vertical; min-height:60px; }
   .toggle-row { display:flex; align-items:center; justify-content:space-between; background:#f6f6f6; padding:10px 12px; border-radius:10px; margin-bottom:14px; }
@@ -90,19 +91,19 @@
   .two-col { display:flex; gap:10px; }
   .two-col .field { flex:1; }
   .btn-primary { width:100%; background:#0f766e; color:#fff; border:none; padding:13px; border-radius:12px; font-size:15px; font-weight:600; margin-top:6px; }
-  .btn-secondary { width:100%; background:#f1f1f1; color:#444; border:none; padding:12px; border-radius:12px; font-size:14px; margin-top:8px; }
+  .btn-secondary { width:100%; background:#f1f1f1; color:#1a1a1a; border:none; padding:12px; border-radius:12px; font-size:14px; margin-top:8px; font-weight:600; }
   .close-x { position:absolute; right:18px; top:16px; background:#f1f1f1; border:none; width:30px; height:30px; border-radius:50%; font-size:16px; }
   .modal-sheet { position:relative; }
-  .balance-hint { font-size:11px; color:#888; margin-top:-8px; margin-bottom:10px; }
+  .balance-hint { font-size:11.5px; color:#0f766e; font-weight:600; margin-top:-8px; margin-bottom:10px; }
 
   /* ---------- REPORTS TAB ---------- */
   .report-btn { display:flex; align-items:center; gap:12px; background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; border:1px solid #e8eceb; }
   .report-btn .ic { font-size:22px; }
   .report-btn .txt b { display:block; font-size:14px; }
-  .report-btn .txt span { font-size:11px; color:#888; }
+  .report-btn .txt span { font-size:11.5px; color:#555; }
   .report-btn { width:100%; text-align:left; }
   .filter-bar { display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; }
-  .filter-chip { padding:7px 14px; border-radius:20px; background:#fff; border:1px solid #ddd; font-size:12px; white-space:nowrap; }
+  .filter-chip { padding:7px 14px; border-radius:20px; background:#fff; border:1px solid #ccc; font-size:12px; white-space:nowrap; color:#1a1a1a; font-weight:500; }
   .filter-chip.active { background:#0f766e; color:#fff; border-color:#0f766e; }
 
   #toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#1a1a1a; color:#fff; padding:10px 20px; border-radius:20px; font-size:13px; z-index:200; opacity:0; transition:.3s; }
@@ -203,10 +204,10 @@
         <span class="ic">⬇️</span>
         <span class="txt"><b>Download Full Backup (JSON)</b><span>எல்லா invoice data-வையும் ஒரு file-ஆ save பண்ணலாம்</span></span>
       </div>
-      <p style="font-size:11.5px;color:#888;margin-top:6px;line-height:1.5;">Firebase project delete பண்ணுறதுக்கு முன்னாடி, இந்த backup-ஐ எடுத்து phone-ல save பண்ணிக்கோங்க. இந்த file-ஐ வச்சு புதுசா எந்த Firebase project-லயும் data restore பண்ணிக்கலாம்.</p>
+      <p style="font-size:11.5px;color:#444;margin-top:6px;line-height:1.5;">Firebase project delete பண்ணுறதுக்கு முன்னாடி, இந்த backup-ஐ எடுத்து phone-ல save பண்ணிக்கோங்க. இந்த file-ஐ வச்சு புதுசா எந்த Firebase project-லயும் data restore பண்ணிக்கலாம்.</p>
 
       <h3 style="margin:22px 0 10px;color:#0f766e;">App Info</h3>
-      <p style="font-size:12px;color:#888;">Import Reports v1.0 · reports.sramesh.in</p>
+      <p style="font-size:12px;color:#444;">Import Reports v1.0 · reports.sramesh.in</p>
     </div>
   </div>
 
