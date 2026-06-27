@@ -34,6 +34,10 @@ function fmtMoney(n) {
   n = Number(n) || 0;
   return '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
+function fmtUSD(n) {
+  n = Number(n) || 0;
+  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
 function fmtDate(d) {
   if (!d) return '-';
   const dt = new Date(d);
@@ -289,8 +293,8 @@ function renderInvoiceList() {
         <div class="row2"><span>Supplier</span><b>${escapeHtml(inv.supplier || '-')}</b></div>
         <div class="row2"><span>Customer</span><b>${escapeHtml(inv.customer || '-')}</b></div>
         <div class="row2"><span>Package</span><b>${escapeHtml(truncate(inv.package, 40))}</b></div>
-        ${inv.total ? `<div class="row2"><span>Total</span><b>${fmtMoney(inv.total)}</b></div>` : ''}
-        ${(inv.advance || inv.balance) ? `<div class="row2"><span>Advance / Balance</span><b>${fmtMoney(inv.advance)} / ${fmtMoney(inv.balance)}</b></div>` : ''}
+        ${(inv.totalUsd || inv.totalInr) ? `<div class="row2"><span>Total</span><b>${inv.totalUsd ? fmtUSD(inv.totalUsd) : ''}${inv.totalUsd && inv.totalInr ? ' / ' : ''}${inv.totalInr ? fmtMoney(inv.totalInr) : ''}</b></div>` : ''}
+        ${(inv.advanceUsd || inv.balanceUsd || inv.advanceInr || inv.balanceInr) ? `<div class="row2"><span>Advance / Balance</span><b>${fmtUSD(inv.advanceUsd)} / ${fmtUSD(inv.balanceUsd)}${(inv.advanceInr || inv.balanceInr) ? '  ·  ' + fmtMoney(inv.advanceInr) + ' / ' + fmtMoney(inv.balanceInr) : ''}</b></div>` : ''}
         <div class="row2"><span>Remittance</span><b>${inv.remitType === '3rdparty' ? '🔁 3rd Party' + (inv.remitThirdParty ? ' (' + escapeHtml(inv.remitThirdParty) + ')' : '') : '➡️ Direct'}</b></div>
         <div class="actions">
           <button onclick="openInvoiceModal('${id}')">✏️ Edit</button>
@@ -320,9 +324,14 @@ function openInvoiceModal(id) {
     document.getElementById('f_supplier').value = inv.supplier || '';
     document.getElementById('f_customer').value = inv.customer || '';
     document.getElementById('f_package').value = inv.package || '';
-    document.getElementById('f_total').value = inv.total || '';
-    document.getElementById('f_advance').value = inv.advance || '';
-    document.getElementById('f_balance').value = inv.balance || '';
+    // New invoices store totalUsd/advanceUsd/balanceUsd + totalInr/advanceInr/balanceInr.
+    // Legacy invoices (before USD/INR split) stored total/advance/balance as a single INR-ish number — migrate those into the INR fields on edit.
+    document.getElementById('f_total_usd').value = inv.totalUsd || '';
+    document.getElementById('f_advance_usd').value = inv.advanceUsd || '';
+    document.getElementById('f_balance_usd').value = inv.balanceUsd || '';
+    document.getElementById('f_total_inr').value = inv.totalInr !== undefined ? (inv.totalInr || '') : (inv.total || '');
+    document.getElementById('f_advance_inr').value = inv.advanceInr !== undefined ? (inv.advanceInr || '') : (inv.advance || '');
+    document.getElementById('f_balance_inr').value = inv.balanceInr !== undefined ? (inv.balanceInr || '') : (inv.balance || '');
     document.getElementById('f_remitType').value = inv.remitType || 'direct';
     document.getElementById('f_remitThirdParty').value = inv.remitThirdParty || '';
     document.getElementById('f_tension').checked = !!inv.tension;
@@ -333,9 +342,12 @@ function openInvoiceModal(id) {
     document.getElementById('f_supplier').value = '';
     document.getElementById('f_customer').value = '';
     document.getElementById('f_package').value = '';
-    document.getElementById('f_total').value = '';
-    document.getElementById('f_advance').value = '';
-    document.getElementById('f_balance').value = '';
+    document.getElementById('f_total_usd').value = '';
+    document.getElementById('f_advance_usd').value = '';
+    document.getElementById('f_balance_usd').value = '';
+    document.getElementById('f_total_inr').value = '';
+    document.getElementById('f_advance_inr').value = '';
+    document.getElementById('f_balance_inr').value = '';
     document.getElementById('f_remitType').value = 'direct';
     document.getElementById('f_remitThirdParty').value = '';
     document.getElementById('f_tension').checked = false;
@@ -355,27 +367,40 @@ function toggleThirdPartyField() {
 }
 
 function updateBalanceHint() {
-  const total = Number(document.getElementById('f_total').value) || 0;
-  const adv = Number(document.getElementById('f_advance').value) || 0;
-  if (total > 0) {
-    const bal = Math.max(total - adv, 0);
-    document.getElementById('f_balance').value = bal ? bal : '';
-    document.getElementById('balanceHint').textContent = `Balance = Total (${fmtMoney(total)}) − Advance (${fmtMoney(adv)}) = ${fmtMoney(bal)}`;
-  } else {
-    document.getElementById('balanceHint').textContent = '';
+  const totalUsd = Number(document.getElementById('f_total_usd').value) || 0;
+  const advUsd = Number(document.getElementById('f_advance_usd').value) || 0;
+  const totalInr = Number(document.getElementById('f_total_inr').value) || 0;
+  const advInr = Number(document.getElementById('f_advance_inr').value) || 0;
+
+  let balUsd = null, balInr = null;
+  if (totalUsd > 0) {
+    balUsd = Math.max(totalUsd - advUsd, 0);
+    document.getElementById('f_balance_usd').value = balUsd ? balUsd : '';
   }
+  if (totalInr > 0) {
+    balInr = Math.max(totalInr - advInr, 0);
+    document.getElementById('f_balance_inr').value = balInr ? balInr : '';
+  }
+  renderBalanceHintText();
 }
 function showBalanceHint() {
-  const total = Number(document.getElementById('f_total').value) || 0;
-  const adv = Number(document.getElementById('f_advance').value) || 0;
-  const bal = Number(document.getElementById('f_balance').value) || 0;
-  if (total > 0) {
-    document.getElementById('balanceHint').textContent = `Balance = Total (${fmtMoney(total)}) − Advance (${fmtMoney(adv)}) = ${fmtMoney(bal)}`;
-  } else if (adv > 0 || bal > 0) {
-    document.getElementById('balanceHint').textContent = `Advance + Balance = ${fmtMoney(adv + bal)}`;
-  } else {
-    document.getElementById('balanceHint').textContent = '';
+  renderBalanceHintText();
+}
+function renderBalanceHintText() {
+  const totalUsd = Number(document.getElementById('f_total_usd').value) || 0;
+  const advUsd = Number(document.getElementById('f_advance_usd').value) || 0;
+  const balUsd = Number(document.getElementById('f_balance_usd').value) || 0;
+  const totalInr = Number(document.getElementById('f_total_inr').value) || 0;
+  const advInr = Number(document.getElementById('f_advance_inr').value) || 0;
+  const balInr = Number(document.getElementById('f_balance_inr').value) || 0;
+  const parts = [];
+  if (totalUsd > 0 || advUsd > 0 || balUsd > 0) {
+    parts.push(`USD: ${fmtUSD(totalUsd)} − ${fmtUSD(advUsd)} = ${fmtUSD(balUsd)}`);
   }
+  if (totalInr > 0 || advInr > 0 || balInr > 0) {
+    parts.push(`INR: ${fmtMoney(totalInr)} − ${fmtMoney(advInr)} = ${fmtMoney(balInr)}`);
+  }
+  document.getElementById('balanceHint').textContent = parts.join('  ·  ');
 }
 function saveInvoice() {
   const invNo = document.getElementById('f_invno').value.trim();
@@ -395,9 +420,12 @@ function saveInvoice() {
   const data = {
     invNo, supplier, customer, package: pkg,
     date: document.getElementById('f_date').value || todayISO(),
-    total: Number(document.getElementById('f_total').value) || 0,
-    advance: Number(document.getElementById('f_advance').value) || 0,
-    balance: Number(document.getElementById('f_balance').value) || 0,
+    totalUsd: Number(document.getElementById('f_total_usd').value) || 0,
+    advanceUsd: Number(document.getElementById('f_advance_usd').value) || 0,
+    balanceUsd: Number(document.getElementById('f_balance_usd').value) || 0,
+    totalInr: Number(document.getElementById('f_total_inr').value) || 0,
+    advanceInr: Number(document.getElementById('f_advance_inr').value) || 0,
+    balanceInr: Number(document.getElementById('f_balance_inr').value) || 0,
     remitType,
     remitThirdParty: remitType === '3rdparty' ? remitThirdParty : '',
     tension: document.getElementById('f_tension').checked,
@@ -405,6 +433,10 @@ function saveInvoice() {
     addedBy: currentUser ? currentUser.name : 'Unknown',
     updatedAt: Date.now()
   };
+  // legacy fields kept in sync (USD treated as the remittance currency of record)
+  data.total = data.totalUsd;
+  data.advance = data.advanceUsd;
+  data.balance = data.balanceUsd;
   const ref = editingInvoiceId
     ? db.ref(ROOT + '/invoices/' + editingInvoiceId)
     : db.ref(ROOT + '/invoices').push();
@@ -570,9 +602,12 @@ function renderReportBody() {
     const list = Object.values(invoicesCache);
     const total = list.length;
     const tension = list.filter(i => i.tension).length;
-    const totalAmt = list.reduce((s, i) => s + (Number(i.total) || 0), 0);
-    const advAmt = list.reduce((s, i) => s + (Number(i.advance) || 0), 0);
-    const balAmt = list.reduce((s, i) => s + (Number(i.balance) || 0), 0);
+    const totalUsdAmt = list.reduce((s, i) => s + (Number(i.totalUsd) || 0), 0);
+    const advUsdAmt = list.reduce((s, i) => s + (Number(i.advanceUsd) || 0), 0);
+    const balUsdAmt = list.reduce((s, i) => s + (Number(i.balanceUsd) || 0), 0);
+    const totalInrAmt = list.reduce((s, i) => s + (Number(i.totalInr) || 0), 0);
+    const advInrAmt = list.reduce((s, i) => s + (Number(i.advanceInr) || 0), 0);
+    const balInrAmt = list.reduce((s, i) => s + (Number(i.balanceInr) || 0), 0);
     const completed = list.filter(i => remitStatus(i.total, i.advance, i.balance) === 'completed').length;
     const pending = total - completed;
     body.innerHTML = `
@@ -580,9 +615,12 @@ function renderReportBody() {
       <div class="card"><div class="row2"><span>Issue Cases</span><b>${tension}</b></div></div>
       <div class="card"><div class="row2"><span>Remittance Completed</span><b>${completed}</b></div></div>
       <div class="card"><div class="row2"><span>Remittance Pending</span><b>${pending}</b></div></div>
-      <div class="card"><div class="row2"><span>Total Invoice Value</span><b>${fmtMoney(totalAmt)}</b></div></div>
-      <div class="card"><div class="row2"><span>Total Advance Received</span><b>${fmtMoney(advAmt)}</b></div></div>
-      <div class="card"><div class="row2"><span>Total Balance Due</span><b>${fmtMoney(balAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>Total Invoice Value (USD)</span><b>${fmtUSD(totalUsdAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>Total Advance Received (USD)</span><b>${fmtUSD(advUsdAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>Total Balance Due (USD)</span><b>${fmtUSD(balUsdAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>Total Invoice Value (INR)</span><b>${fmtMoney(totalInrAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>Total Advance Received (INR)</span><b>${fmtMoney(advInrAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>Total Balance Due (INR)</span><b>${fmtMoney(balInrAmt)}</b></div></div>
     `;
     return;
   }
@@ -620,7 +658,8 @@ function renderReportBody() {
         </div>
         <div class="row2"><span>Supplier</span><b>${escapeHtml(i.supplier)}</b></div>
         <div class="row2"><span>Customer</span><b>${escapeHtml(i.customer)}</b></div>
-        <div class="row2"><span>Total / Adv / Bal</span><b>${fmtMoney(i.total)} / ${fmtMoney(i.advance)} / ${fmtMoney(i.balance)}</b></div>
+        <div class="row2"><span>Total / Adv / Bal (USD)</span><b>${fmtUSD(i.totalUsd)} / ${fmtUSD(i.advanceUsd)} / ${fmtUSD(i.balanceUsd)}</b></div>
+        ${(i.totalInr || i.advanceInr || i.balanceInr) ? `<div class="row2"><span>Total / Adv / Bal (INR)</span><b>${fmtMoney(i.totalInr)} / ${fmtMoney(i.advanceInr)} / ${fmtMoney(i.balanceInr)}</b></div>` : ''}
         <div class="row2"><span>Remittance</span><b>${i.remitType === '3rdparty' ? '🔁 3rd Party' + (i.remitThirdParty ? ' (' + escapeHtml(i.remitThirdParty) + ')' : '') : '➡️ Direct'}</b></div>
       </div>`;
   }).join('');
@@ -651,9 +690,12 @@ function exportReportPDF() {
       ['Issue Cases', String(list.filter(i => i.tension).length)],
       ['Remittance Completed', String(list.filter(i => remitStatus(i.total, i.advance, i.balance) === 'completed').length)],
       ['Remittance Pending', String(list.filter(i => remitStatus(i.total, i.advance, i.balance) !== 'completed').length)],
-      ['Total Invoice Value', fmtMoney(list.reduce((s, i) => s + (Number(i.total) || 0), 0))],
-      ['Total Advance Received', fmtMoney(list.reduce((s, i) => s + (Number(i.advance) || 0), 0))],
-      ['Total Balance Due', fmtMoney(list.reduce((s, i) => s + (Number(i.balance) || 0), 0))]
+      ['Total Invoice Value (USD)', fmtUSD(list.reduce((s, i) => s + (Number(i.totalUsd) || 0), 0))],
+      ['Total Advance Received (USD)', fmtUSD(list.reduce((s, i) => s + (Number(i.advanceUsd) || 0), 0))],
+      ['Total Balance Due (USD)', fmtUSD(list.reduce((s, i) => s + (Number(i.balanceUsd) || 0), 0))],
+      ['Total Invoice Value (INR)', fmtMoney(list.reduce((s, i) => s + (Number(i.totalInr) || 0), 0))],
+      ['Total Advance Received (INR)', fmtMoney(list.reduce((s, i) => s + (Number(i.advanceInr) || 0), 0))],
+      ['Total Balance Due (INR)', fmtMoney(list.reduce((s, i) => s + (Number(i.balanceInr) || 0), 0))]
     ];
     doc.autoTable({ startY: 33, head: [['Metric', 'Value']], body: rows });
   } else if (currentReportType === 'package') {
@@ -665,13 +707,14 @@ function exportReportPDF() {
       statusLabel(remitStatus(i.total, i.advance, i.balance)),
       i.remitType === '3rdparty' ? ('3rd Party' + (i.remitThirdParty ? ': ' + i.remitThirdParty : '')) : 'Direct',
       i.tension ? 'Yes' : 'No',
-      fmtMoney(i.total), fmtMoney(i.advance), fmtMoney(i.balance)
+      fmtUSD(i.totalUsd), fmtUSD(i.advanceUsd), fmtUSD(i.balanceUsd),
+      fmtMoney(i.totalInr), fmtMoney(i.advanceInr), fmtMoney(i.balanceInr)
     ]);
     doc.autoTable({
       startY: 33,
-      head: [['Invoice', 'Date', 'Supplier', 'Customer', 'Remit', 'Remit Type', 'Issue', 'Total', 'Advance', 'Balance']],
+      head: [['Invoice', 'Date', 'Supplier', 'Customer', 'Remit', 'Remit Type', 'Issue', 'Total $', 'Adv $', 'Bal $', 'Total ₹', 'Adv ₹', 'Bal ₹']],
       body: rows,
-      styles: { fontSize: 6.5 }
+      styles: { fontSize: 5.8 }
     });
   }
   doc.save((titleMap[currentReportType] || 'report').replace(/\s+/g, '_') + '_' + todayISO() + '.pdf');
@@ -696,9 +739,12 @@ function exportReportExcel() {
       { Metric: 'Issue Cases', Value: list.filter(i => i.tension).length },
       { Metric: 'Remittance Completed', Value: list.filter(i => remitStatus(i.total, i.advance, i.balance) === 'completed').length },
       { Metric: 'Remittance Pending', Value: list.filter(i => remitStatus(i.total, i.advance, i.balance) !== 'completed').length },
-      { Metric: 'Total Invoice Value', Value: list.reduce((s, i) => s + (Number(i.total) || 0), 0) },
-      { Metric: 'Total Advance Received', Value: list.reduce((s, i) => s + (Number(i.advance) || 0), 0) },
-      { Metric: 'Total Balance Due', Value: list.reduce((s, i) => s + (Number(i.balance) || 0), 0) }
+      { Metric: 'Total Invoice Value (USD)', Value: list.reduce((s, i) => s + (Number(i.totalUsd) || 0), 0) },
+      { Metric: 'Total Advance Received (USD)', Value: list.reduce((s, i) => s + (Number(i.advanceUsd) || 0), 0) },
+      { Metric: 'Total Balance Due (USD)', Value: list.reduce((s, i) => s + (Number(i.balanceUsd) || 0), 0) },
+      { Metric: 'Total Invoice Value (INR)', Value: list.reduce((s, i) => s + (Number(i.totalInr) || 0), 0) },
+      { Metric: 'Total Advance Received (INR)', Value: list.reduce((s, i) => s + (Number(i.advanceInr) || 0), 0) },
+      { Metric: 'Total Balance Due (INR)', Value: list.reduce((s, i) => s + (Number(i.balanceInr) || 0), 0) }
     ];
   } else {
     const entries = getReportData();
@@ -708,9 +754,12 @@ function exportReportExcel() {
       Supplier: i.supplier,
       Customer: i.customer,
       Package: i.package,
-      Total: i.total,
-      Advance: i.advance,
-      Balance: i.balance,
+      'Total (USD)': i.totalUsd,
+      'Advance (USD)': i.advanceUsd,
+      'Balance (USD)': i.balanceUsd,
+      'Total (INR)': i.totalInr,
+      'Advance (INR)': i.advanceInr,
+      'Balance (INR)': i.balanceInr,
       'Remittance Status': statusLabel(remitStatus(i.total, i.advance, i.balance)),
       'Remittance Type': i.remitType === '3rdparty' ? '3rd Party' : 'Direct',
       '3rd Party Name': i.remitType === '3rdparty' ? (i.remitThirdParty || '') : '',
