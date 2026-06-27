@@ -355,10 +355,27 @@ function toggleThirdPartyField() {
 }
 
 function updateBalanceHint() {
+  const total = Number(document.getElementById('f_total').value) || 0;
+  const adv = Number(document.getElementById('f_advance').value) || 0;
+  if (total > 0) {
+    const bal = Math.max(total - adv, 0);
+    document.getElementById('f_balance').value = bal ? bal : '';
+    document.getElementById('balanceHint').textContent = `Balance = Total (${fmtMoney(total)}) − Advance (${fmtMoney(adv)}) = ${fmtMoney(bal)}`;
+  } else {
+    document.getElementById('balanceHint').textContent = '';
+  }
+}
+function showBalanceHint() {
+  const total = Number(document.getElementById('f_total').value) || 0;
   const adv = Number(document.getElementById('f_advance').value) || 0;
   const bal = Number(document.getElementById('f_balance').value) || 0;
-  const total = adv + bal;
-  document.getElementById('balanceHint').textContent = total > 0 ? `Advance + Balance = ${fmtMoney(total)}` : '';
+  if (total > 0) {
+    document.getElementById('balanceHint').textContent = `Balance = Total (${fmtMoney(total)}) − Advance (${fmtMoney(adv)}) = ${fmtMoney(bal)}`;
+  } else if (adv > 0 || bal > 0) {
+    document.getElementById('balanceHint').textContent = `Advance + Balance = ${fmtMoney(adv + bal)}`;
+  } else {
+    document.getElementById('balanceHint').textContent = '';
+  }
 }
 function saveInvoice() {
   const invNo = document.getElementById('f_invno').value.trim();
