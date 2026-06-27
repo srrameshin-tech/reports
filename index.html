@@ -273,6 +273,18 @@
     </div>
     <div class="balance-hint" id="balanceHint"></div>
 
+    <div class="field">
+      <label>Remittance Type</label>
+      <select id="f_remitType" onchange="toggleThirdPartyField()">
+        <option value="direct">Direct Remittance</option>
+        <option value="3rdparty">3rd Party Remittance</option>
+      </select>
+    </div>
+    <div class="field hidden" id="thirdPartyNameWrap">
+      <label>3rd Party Name *</label>
+      <input type="text" id="f_remitThirdParty" placeholder="3rd party person/company name">
+    </div>
+
     <div class="toggle-row">
       <span>⚠️ Issue / Pending?</span>
       <label class="switch"><input type="checkbox" id="f_tension"><span class="slider"></span></label>
