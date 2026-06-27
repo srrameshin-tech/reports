@@ -291,6 +291,7 @@ function renderInvoiceList() {
         <div class="row2"><span>Package</span><b>${escapeHtml(truncate(inv.package, 40))}</b></div>
         ${inv.total ? `<div class="row2"><span>Total</span><b>${fmtMoney(inv.total)}</b></div>` : ''}
         ${(inv.advance || inv.balance) ? `<div class="row2"><span>Advance / Balance</span><b>${fmtMoney(inv.advance)} / ${fmtMoney(inv.balance)}</b></div>` : ''}
+        <div class="row2"><span>Remittance</span><b>${inv.remitType === '3rdparty' ? '🔁 3rd Party' + (inv.remitThirdParty ? ' (' + escapeHtml(inv.remitThirdParty) + ')' : '') : '➡️ Direct'}</b></div>
         <div class="actions">
           <button onclick="openInvoiceModal('${id}')">✏️ Edit</button>
           <button class="danger" onclick="deleteInvoice('${id}')">🗑️ Delete</button>
@@ -322,6 +323,8 @@ function openInvoiceModal(id) {
     document.getElementById('f_total').value = inv.total || '';
     document.getElementById('f_advance').value = inv.advance || '';
     document.getElementById('f_balance').value = inv.balance || '';
+    document.getElementById('f_remitType').value = inv.remitType || 'direct';
+    document.getElementById('f_remitThirdParty').value = inv.remitThirdParty || '';
     document.getElementById('f_tension').checked = !!inv.tension;
     document.getElementById('f_notes').value = inv.notes || '';
   } else {
@@ -333,9 +336,12 @@ function openInvoiceModal(id) {
     document.getElementById('f_total').value = '';
     document.getElementById('f_advance').value = '';
     document.getElementById('f_balance').value = '';
+    document.getElementById('f_remitType').value = 'direct';
+    document.getElementById('f_remitThirdParty').value = '';
     document.getElementById('f_tension').checked = false;
     document.getElementById('f_notes').value = '';
   }
+  toggleThirdPartyField();
   updateBalanceHint();
   document.getElementById('invoiceModalOverlay').classList.remove('hidden');
 }
@@ -343,6 +349,11 @@ function closeInvoiceModal() {
   document.getElementById('invoiceModalOverlay').classList.add('hidden');
   editingInvoiceId = null;
 }
+function toggleThirdPartyField() {
+  const type = document.getElementById('f_remitType').value;
+  document.getElementById('thirdPartyNameWrap').classList.toggle('hidden', type !== '3rdparty');
+}
+
 function updateBalanceHint() {
   const adv = Number(document.getElementById('f_advance').value) || 0;
   const bal = Number(document.getElementById('f_balance').value) || 0;
@@ -354,8 +365,14 @@ function saveInvoice() {
   const supplier = document.getElementById('f_supplier').value.trim();
   const customer = document.getElementById('f_customer').value.trim();
   const pkg = document.getElementById('f_package').value.trim();
+  const remitType = document.getElementById('f_remitType').value;
+  const remitThirdParty = document.getElementById('f_remitThirdParty').value.trim();
   if (!invNo || !supplier || !customer || !pkg) {
     toast('⚠️ Invoice No, Supplier, Customer, Package — இவை அனைத்தும் fill பண்ணணும்');
+    return;
+  }
+  if (remitType === '3rdparty' && !remitThirdParty) {
+    toast('⚠️ 3rd Party Name கொடுங்க');
     return;
   }
   const data = {
@@ -364,6 +381,8 @@ function saveInvoice() {
     total: Number(document.getElementById('f_total').value) || 0,
     advance: Number(document.getElementById('f_advance').value) || 0,
     balance: Number(document.getElementById('f_balance').value) || 0,
+    remitType,
+    remitThirdParty: remitType === '3rdparty' ? remitThirdParty : '',
     tension: document.getElementById('f_tension').checked,
     notes: document.getElementById('f_notes').value.trim(),
     addedBy: currentUser ? currentUser.name : 'Unknown',
@@ -585,6 +604,7 @@ function renderReportBody() {
         <div class="row2"><span>Supplier</span><b>${escapeHtml(i.supplier)}</b></div>
         <div class="row2"><span>Customer</span><b>${escapeHtml(i.customer)}</b></div>
         <div class="row2"><span>Total / Adv / Bal</span><b>${fmtMoney(i.total)} / ${fmtMoney(i.advance)} / ${fmtMoney(i.balance)}</b></div>
+        <div class="row2"><span>Remittance</span><b>${i.remitType === '3rdparty' ? '🔁 3rd Party' + (i.remitThirdParty ? ' (' + escapeHtml(i.remitThirdParty) + ')' : '') : '➡️ Direct'}</b></div>
       </div>`;
   }).join('');
 }
@@ -626,14 +646,15 @@ function exportReportPDF() {
     const rows = entries.map(([id, i]) => [
       i.invNo, fmtDate(i.date), i.supplier, i.customer,
       statusLabel(remitStatus(i.total, i.advance, i.balance)),
+      i.remitType === '3rdparty' ? ('3rd Party' + (i.remitThirdParty ? ': ' + i.remitThirdParty : '')) : 'Direct',
       i.tension ? 'Yes' : 'No',
       fmtMoney(i.total), fmtMoney(i.advance), fmtMoney(i.balance)
     ]);
     doc.autoTable({
       startY: 33,
-      head: [['Invoice', 'Date', 'Supplier', 'Customer', 'Remit', 'Issue', 'Total', 'Advance', 'Balance']],
+      head: [['Invoice', 'Date', 'Supplier', 'Customer', 'Remit', 'Remit Type', 'Issue', 'Total', 'Advance', 'Balance']],
       body: rows,
-      styles: { fontSize: 7 }
+      styles: { fontSize: 6.5 }
     });
   }
   doc.save((titleMap[currentReportType] || 'report').replace(/\s+/g, '_') + '_' + todayISO() + '.pdf');
@@ -674,6 +695,8 @@ function exportReportExcel() {
       Advance: i.advance,
       Balance: i.balance,
       'Remittance Status': statusLabel(remitStatus(i.total, i.advance, i.balance)),
+      'Remittance Type': i.remitType === '3rdparty' ? '3rd Party' : 'Direct',
+      '3rd Party Name': i.remitType === '3rdparty' ? (i.remitThirdParty || '') : '',
       Issue: i.tension ? 'Yes' : 'No',
       'Added By': i.addedBy || '',
       Notes: i.notes || ''
