@@ -295,6 +295,7 @@ function renderInvoiceList() {
         <div class="row2"><span>Package</span><b>${escapeHtml(truncate(inv.package, 40))}</b></div>
         ${(inv.totalUsd || inv.totalInr) ? `<div class="row2"><span>Total</span><b>${inv.totalUsd ? fmtUSD(inv.totalUsd) : ''}${inv.totalUsd && inv.totalInr ? ' / ' : ''}${inv.totalInr ? fmtMoney(inv.totalInr) : ''}</b></div>` : ''}
         ${(inv.advanceUsd || inv.balanceUsd || inv.advanceInr || inv.balanceInr) ? `<div class="row2"><span>Advance / Balance</span><b>${fmtUSD(inv.advanceUsd)} / ${fmtUSD(inv.balanceUsd)}${(inv.advanceInr || inv.balanceInr) ? '  ·  ' + fmtMoney(inv.advanceInr) + ' / ' + fmtMoney(inv.balanceInr) : ''}</b></div>` : ''}
+        ${inv.exRate ? `<div class="row2"><span>Exchange Rate</span><b>1 USD = ${fmtMoney(inv.exRate)}</b></div>` : ''}
         <div class="row2"><span>Remittance</span><b>${inv.remitType === '3rdparty' ? '🔁 3rd Party' + (inv.remitThirdParty ? ' (' + escapeHtml(inv.remitThirdParty) + ')' : '') : '➡️ Direct'}</b></div>
         <div class="actions">
           <button onclick="openInvoiceModal('${id}')">✏️ Edit</button>
@@ -317,6 +318,7 @@ function truncate(s, n) {
 function openInvoiceModal(id) {
   editingInvoiceId = id || null;
   document.getElementById('modalTitle').textContent = id ? 'Invoice Edit' : 'New Invoice';
+  unlockAllFields();
   if (id && invoicesCache[id]) {
     const inv = invoicesCache[id];
     document.getElementById('f_invno').value = inv.invNo || '';
@@ -324,6 +326,7 @@ function openInvoiceModal(id) {
     document.getElementById('f_supplier').value = inv.supplier || '';
     document.getElementById('f_customer').value = inv.customer || '';
     document.getElementById('f_package').value = inv.package || '';
+    document.getElementById('f_exrate').value = inv.exRate || '';
     // New invoices store totalUsd/advanceUsd/balanceUsd + totalInr/advanceInr/balanceInr.
     // Legacy invoices (before USD/INR split) stored total/advance/balance as a single INR-ish number — migrate those into the INR fields on edit.
     document.getElementById('f_total_usd').value = inv.totalUsd || '';
@@ -332,6 +335,9 @@ function openInvoiceModal(id) {
     document.getElementById('f_total_inr').value = inv.totalInr !== undefined ? (inv.totalInr || '') : (inv.total || '');
     document.getElementById('f_advance_inr').value = inv.advanceInr !== undefined ? (inv.advanceInr || '') : (inv.advance || '');
     document.getElementById('f_balance_inr').value = inv.balanceInr !== undefined ? (inv.balanceInr || '') : (inv.balance || '');
+    // Mark loaded amount fields as manual so opening an existing invoice doesn't silently recalculate saved values
+    document.getElementById('f_balance_usd').dataset.manual = '1';
+    document.getElementById('f_balance_inr').dataset.manual = '1';
     document.getElementById('f_remitType').value = inv.remitType || 'direct';
     document.getElementById('f_remitThirdParty').value = inv.remitThirdParty || '';
     document.getElementById('f_tension').checked = !!inv.tension;
@@ -342,6 +348,7 @@ function openInvoiceModal(id) {
     document.getElementById('f_supplier').value = '';
     document.getElementById('f_customer').value = '';
     document.getElementById('f_package').value = '';
+    document.getElementById('f_exrate').value = '';
     document.getElementById('f_total_usd').value = '';
     document.getElementById('f_advance_usd').value = '';
     document.getElementById('f_balance_usd').value = '';
@@ -366,27 +373,97 @@ function toggleThirdPartyField() {
   document.getElementById('thirdPartyNameWrap').classList.toggle('hidden', type !== '3rdparty');
 }
 
-function updateBalanceHint() {
+function getExRate() {
+  return Number(document.getElementById('f_exrate').value) || 0;
+}
+function lockField(field, currency) {
+  const input = document.getElementById('f_' + field + '_' + currency);
+  const btn = document.getElementById('edit_' + field + '_' + currency);
+  if (input) { input.readOnly = true; delete input.dataset.manual; }
+  if (btn) btn.classList.remove('hidden');
+}
+function unlockField(field, currency) {
+  const input = document.getElementById('f_' + field + '_' + currency);
+  const btn = document.getElementById('edit_' + field + '_' + currency);
+  if (input) { input.readOnly = false; input.dataset.manual = '1'; input.focus(); }
+  if (btn) btn.classList.add('hidden');
+}
+function unlockAllFields() {
+  ['total_inr', 'advance_inr', 'balance_usd', 'balance_inr'].forEach(key => {
+    const input = document.getElementById('f_' + key);
+    const btn = document.getElementById('edit_' + key);
+    if (input) { input.readOnly = false; delete input.dataset.manual; }
+    if (btn) btn.classList.add('hidden');
+  });
+}
+function onExRateChange() {
+  // Re-derive INR from USD for all three fields whenever the rate changes (USD treated as source of truth)
+  const rate = getExRate();
+  if (rate > 0) {
+    ['total', 'advance'].forEach(field => {
+      const usdEl = document.getElementById('f_' + field + '_usd');
+      const inrEl = document.getElementById('f_' + field + '_inr');
+      const usd = Number(usdEl.value) || 0;
+      if (usd > 0 && !inrEl.dataset.manual) {
+        inrEl.value = round2(usd * rate);
+        lockField(field, 'inr');
+      }
+    });
+  }
+  recalcBalance();
+  renderBalanceHintText();
+}
+function onAmountInput(field, currency) {
+  const rate = getExRate();
+  const sourceEl = document.getElementById('f_' + field + '_' + currency);
+  delete sourceEl.dataset.manual;
+  if (rate > 0 && field !== 'balance') {
+    const otherCurrency = currency === 'usd' ? 'inr' : 'usd';
+    const otherEl = document.getElementById('f_' + field + '_' + otherCurrency);
+    if (!otherEl.dataset.manual) {
+      const val = Number(sourceEl.value) || 0;
+      if (val > 0) {
+        const converted = currency === 'usd' ? val * rate : val / rate;
+        otherEl.value = round2(converted);
+        lockField(field, otherCurrency);
+      } else {
+        otherEl.value = '';
+      }
+    }
+  }
+  recalcBalance();
+  renderBalanceHintText();
+}
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+function recalcBalance() {
   const totalUsd = Number(document.getElementById('f_total_usd').value) || 0;
   const advUsd = Number(document.getElementById('f_advance_usd').value) || 0;
   const totalInr = Number(document.getElementById('f_total_inr').value) || 0;
   const advInr = Number(document.getElementById('f_advance_inr').value) || 0;
-
-  let balUsd = null, balInr = null;
-  if (totalUsd > 0) {
-    balUsd = Math.max(totalUsd - advUsd, 0);
-    document.getElementById('f_balance_usd').value = balUsd ? balUsd : '';
+  const balUsdEl = document.getElementById('f_balance_usd');
+  const balInrEl = document.getElementById('f_balance_inr');
+  if (totalUsd > 0 && !balUsdEl.dataset.manual) {
+    const balUsd = Math.max(round2(totalUsd - advUsd), 0);
+    balUsdEl.value = balUsd ? balUsd : '';
+    lockField('balance', 'usd');
   }
-  if (totalInr > 0) {
-    balInr = Math.max(totalInr - advInr, 0);
-    document.getElementById('f_balance_inr').value = balInr ? balInr : '';
+  if (totalInr > 0 && !balInrEl.dataset.manual) {
+    const balInr = Math.max(round2(totalInr - advInr), 0);
+    balInrEl.value = balInr ? balInr : '';
+    lockField('balance', 'inr');
   }
+}
+function updateBalanceHint() {
+  recalcBalance();
   renderBalanceHintText();
 }
 function showBalanceHint() {
   renderBalanceHintText();
 }
 function renderBalanceHintText() {
+  const rate = getExRate();
   const totalUsd = Number(document.getElementById('f_total_usd').value) || 0;
   const advUsd = Number(document.getElementById('f_advance_usd').value) || 0;
   const balUsd = Number(document.getElementById('f_balance_usd').value) || 0;
@@ -394,6 +471,7 @@ function renderBalanceHintText() {
   const advInr = Number(document.getElementById('f_advance_inr').value) || 0;
   const balInr = Number(document.getElementById('f_balance_inr').value) || 0;
   const parts = [];
+  if (rate > 0) parts.push(`Rate: 1 USD = ${fmtMoney(rate)}`);
   if (totalUsd > 0 || advUsd > 0 || balUsd > 0) {
     parts.push(`USD: ${fmtUSD(totalUsd)} − ${fmtUSD(advUsd)} = ${fmtUSD(balUsd)}`);
   }
@@ -420,6 +498,7 @@ function saveInvoice() {
   const data = {
     invNo, supplier, customer, package: pkg,
     date: document.getElementById('f_date').value || todayISO(),
+    exRate: Number(document.getElementById('f_exrate').value) || 0,
     totalUsd: Number(document.getElementById('f_total_usd').value) || 0,
     advanceUsd: Number(document.getElementById('f_advance_usd').value) || 0,
     balanceUsd: Number(document.getElementById('f_balance_usd').value) || 0,
