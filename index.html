@@ -140,7 +140,7 @@
     </div>
     <div class="summary-strip">
       <div class="sum-card"><div class="n" id="sTotal">0</div><div class="l">Total Invoice</div></div>
-      <div class="sum-card"><div class="n" id="sTension">0</div><div class="l">Tension</div></div>
+      <div class="sum-card"><div class="n" id="sTension">0</div><div class="l">Issue</div></div>
       <div class="sum-card"><div class="n" id="sPending">0</div><div class="l">Remit Pending</div></div>
       <div class="sum-card"><div class="n" id="sCompleted">0</div><div class="l">Completed</div></div>
     </div>
@@ -156,8 +156,8 @@
     <!-- LIST TAB -->
     <div id="tab-list">
       <div class="filter-bar" id="listFilterBar">
-        <button class="filter-chip active" data-f="all" onclick="setListFilter('all')">அனைத்தும்</button>
-        <button class="filter-chip" data-f="tension" onclick="setListFilter('tension')">⚠️ Tension</button>
+        <button class="filter-chip active" data-f="all" onclick="setListFilter('all')">All</button>
+        <button class="filter-chip" data-f="tension" onclick="setListFilter('tension')">⚠️ Issue</button>
         <button class="filter-chip" data-f="pending" onclick="setListFilter('pending')">💰 Pending</button>
         <button class="filter-chip" data-f="completed" onclick="setListFilter('completed')">✅ Completed</button>
       </div>
@@ -180,7 +180,7 @@
       </button>
       <button class="report-btn" onclick="openReport('tension')">
         <span class="ic">⚠️</span>
-        <span class="txt"><b>Tension/Pending Cases</b><span>Tension mark செஞ்சவை மட்டும்</span></span>
+        <span class="txt"><b>Issue/Pending Cases</b><span>Issue mark செஞ்சவை மட்டும்</span></span>
       </button>
       <button class="report-btn" onclick="openReport('remittance')">
         <span class="ic">💰</span>
@@ -274,7 +274,7 @@
     <div class="balance-hint" id="balanceHint"></div>
 
     <div class="toggle-row">
-      <span>⚠️ Tension / Pending issue?</span>
+      <span>⚠️ Issue / Pending?</span>
       <label class="switch"><input type="checkbox" id="f_tension"><span class="slider"></span></label>
     </div>
 
