@@ -58,7 +58,7 @@ function remitStatus(total, advance, balance) {
   return 'partial';
 }
 function statusLabel(s) {
-  return { pending: 'Pending', partial: 'Partial', completed: 'Completed' }[s] || s;
+  return { pending: 'பெண்டிங்', partial: 'பாதி', completed: 'முடிந்தது' }[s] || s;
 }
 function initials(name) {
   if (!name) return '?';
@@ -284,7 +284,7 @@ function renderInvoiceList() {
         </div>
         <div class="badges">
           <span class="badge ${rs}">💰 ${statusLabel(rs)}</span>
-          <span class="badge ${inv.tension ? 'tension-yes' : 'tension-no'}">${inv.tension ? '⚠️ Tension' : '✅ No Tension'}</span>
+          <span class="badge ${inv.tension ? 'tension-yes' : 'tension-no'}">${inv.tension ? '⚠️ டென்ஷன்' : '✅ பரவாயில்ல'}</span>
         </div>
         <div class="row2"><span>Supplier</span><b>${escapeHtml(inv.supplier || '-')}</b></div>
         <div class="row2"><span>Customer</span><b>${escapeHtml(inv.customer || '-')}</b></div>
@@ -482,7 +482,7 @@ function openReport(type) {
     invoice: '🧾 Invoice-wise Status',
     package: '📦 Package-wise Status',
     daterange: '📅 Date Range Report',
-    tension: '⚠️ Tension / Pending Cases',
+    tension: '⚠️ டென்ஷன் / பெண்டிங் Cases',
     remittance: '💰 Remittance Pending',
     summary: '📈 Summary Dashboard'
   };
@@ -540,13 +540,13 @@ function renderReportBody() {
     const completed = list.filter(i => remitStatus(i.total, i.advance, i.balance) === 'completed').length;
     const pending = total - completed;
     body.innerHTML = `
-      <div class="card"><div class="row2"><span>Total Invoices</span><b>${total}</b></div></div>
-      <div class="card"><div class="row2"><span>Tension Cases</span><b>${tension}</b></div></div>
-      <div class="card"><div class="row2"><span>Remittance Completed</span><b>${completed}</b></div></div>
-      <div class="card"><div class="row2"><span>Remittance Pending</span><b>${pending}</b></div></div>
-      <div class="card"><div class="row2"><span>Total Invoice Value</span><b>${fmtMoney(totalAmt)}</b></div></div>
-      <div class="card"><div class="row2"><span>Total Advance Received</span><b>${fmtMoney(advAmt)}</b></div></div>
-      <div class="card"><div class="row2"><span>Total Balance Due</span><b>${fmtMoney(balAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>மொத்த Invoices</span><b>${total}</b></div></div>
+      <div class="card"><div class="row2"><span>டென்ஷன் Cases</span><b>${tension}</b></div></div>
+      <div class="card"><div class="row2"><span>பணம் முடிந்தது</span><b>${completed}</b></div></div>
+      <div class="card"><div class="row2"><span>பணம் பெண்டிங்</span><b>${pending}</b></div></div>
+      <div class="card"><div class="row2"><span>மொத்த Invoice Value</span><b>${fmtMoney(totalAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>மொத்த Advance வந்தது</span><b>${fmtMoney(advAmt)}</b></div></div>
+      <div class="card"><div class="row2"><span>மொத்த Balance நிலுவை</span><b>${fmtMoney(balAmt)}</b></div></div>
     `;
     return;
   }
@@ -580,7 +580,7 @@ function renderReportBody() {
         </div>
         <div class="badges">
           <span class="badge ${rs}">💰 ${statusLabel(rs)}</span>
-          <span class="badge ${i.tension ? 'tension-yes' : 'tension-no'}">${i.tension ? '⚠️ Tension' : '✅ OK'}</span>
+          <span class="badge ${i.tension ? 'tension-yes' : 'tension-no'}">${i.tension ? '⚠️ டென்ஷன்' : '✅ OK'}</span>
         </div>
         <div class="row2"><span>Supplier</span><b>${escapeHtml(i.supplier)}</b></div>
         <div class="row2"><span>Customer</span><b>${escapeHtml(i.customer)}</b></div>
