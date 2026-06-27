@@ -92,7 +92,9 @@
   .modal-sheet { background:var(--paper); width:100%; max-height:92vh; overflow-y:auto; border-radius:20px 20px 0 0; padding:20px 18px 30px; position:relative; }
   .modal-sheet h3 { font-family:'Space Grotesk',sans-serif; font-weight:700; margin-bottom:16px; color:var(--cargo); font-size:19px; }
   .field { margin-bottom:14px; }
-  .field label { font-size:11.5px; color:#5c5648; display:block; margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .field label { font-size:11.5px; color:#5c5648; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .edit-lock-btn { background:var(--cargo-light); color:var(--cargo); border:none; border-radius:5px; padding:2px 8px; font-size:10px; font-weight:700; text-transform:none; letter-spacing:0; }
+  .field input[readonly] { background:var(--paper-deep); color:#6b6557; }
   .field input, .field select, .field textarea { width:100%; padding:11px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14.5px; background:#fff; font-weight:700; color:var(--ink); font-family:'IBM Plex Mono',monospace; }
   .field textarea { font-family:'Inter',sans-serif; font-weight:500; }
   .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--cargo); box-shadow:0 0 0 3px var(--cargo-light); }
@@ -275,15 +277,21 @@
       <textarea id="f_package" placeholder="Item description, qty, packages etc."></textarea>
     </div>
 
+    <div class="field">
+      <label>Exchange Rate (1 USD = ? INR)</label>
+      <input type="number" id="f_exrate" placeholder="e.g. 83.50" inputmode="decimal" oninput="onExRateChange()">
+    </div>
+    <p style="font-size:11px;color:#6b6557;margin-top:-10px;margin-bottom:10px;">Enter the rate once. Type either USD or INR below for Total/Advance/Balance — the other currency fills in automatically.</p>
+
     <p style="font-size:11px;color:#6b6557;margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">💵 Total Invoice Amount</p>
     <div class="two-col">
       <div class="field">
         <label>USD</label>
-        <input type="number" id="f_total_usd" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
+        <input type="number" id="f_total_usd" placeholder="0.00" inputmode="decimal" oninput="onAmountInput('total','usd')">
       </div>
       <div class="field">
-        <label>INR</label>
-        <input type="number" id="f_total_inr" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
+        <label>INR <button type="button" class="edit-lock-btn hidden" id="edit_total_inr" onclick="unlockField('total','inr')">Edit</button></label>
+        <input type="number" id="f_total_inr" placeholder="0.00" inputmode="decimal" oninput="onAmountInput('total','inr')">
       </div>
     </div>
 
@@ -291,26 +299,26 @@
     <div class="two-col">
       <div class="field">
         <label>USD</label>
-        <input type="number" id="f_advance_usd" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
+        <input type="number" id="f_advance_usd" placeholder="0.00" inputmode="decimal" oninput="onAmountInput('advance','usd')">
       </div>
       <div class="field">
-        <label>INR</label>
-        <input type="number" id="f_advance_inr" placeholder="0.00" inputmode="decimal" oninput="updateBalanceHint()">
+        <label>INR <button type="button" class="edit-lock-btn hidden" id="edit_advance_inr" onclick="unlockField('advance','inr')">Edit</button></label>
+        <input type="number" id="f_advance_inr" placeholder="0.00" inputmode="decimal" oninput="onAmountInput('advance','inr')">
       </div>
     </div>
 
     <p style="font-size:11px;color:#6b6557;margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">🧾 Balance Amount</p>
     <div class="two-col">
       <div class="field">
-        <label>USD</label>
-        <input type="number" id="f_balance_usd" placeholder="0.00" inputmode="decimal" oninput="showBalanceHint()">
+        <label>USD <button type="button" class="edit-lock-btn hidden" id="edit_balance_usd" onclick="unlockField('balance','usd')">Edit</button></label>
+        <input type="number" id="f_balance_usd" placeholder="0.00" inputmode="decimal" oninput="onAmountInput('balance','usd')">
       </div>
       <div class="field">
-        <label>INR</label>
-        <input type="number" id="f_balance_inr" placeholder="0.00" inputmode="decimal" oninput="showBalanceHint()">
+        <label>INR <button type="button" class="edit-lock-btn hidden" id="edit_balance_inr" onclick="unlockField('balance','inr')">Edit</button></label>
+        <input type="number" id="f_balance_inr" placeholder="0.00" inputmode="decimal" oninput="onAmountInput('balance','inr')">
       </div>
     </div>
-    <p style="font-size:11px;color:#6b6557;margin-top:6px;margin-bottom:6px;">Balance auto-calculated as Total − Advance (per currency). Edit manually if needed.</p>
+    <p style="font-size:11px;color:#6b6557;margin-top:6px;margin-bottom:6px;">Balance auto-calculated as Total − Advance (per currency). Tap "Edit" to override a locked field.</p>
     <div class="balance-hint" id="balanceHint"></div>
 
     <div class="field">
