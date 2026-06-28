@@ -413,6 +413,7 @@ function renderInvoiceList() {
         ${(inv.advanceUsd || inv.balanceUsd || inv.advanceInr || inv.balanceInr) ? `<div class="row2"><span>Advance / Balance</span><b>${fmtUSD(inv.advanceUsd)} / ${fmtUSD(inv.balanceUsd)}${(inv.advanceInr || inv.balanceInr) ? '  ·  ' + fmtMoney(inv.advanceInr) + ' / ' + fmtMoney(inv.balanceInr) : ''}</b></div>` : ''}
         ${inv.exRate ? `<div class="row2"><span>Exchange Rate</span><b>1 USD = ${fmtMoney(inv.exRate)}</b></div>` : ''}
         <div class="row2"><span>Remittance</span><b>${inv.remitType === '3rdparty' ? '🔁 3rd Party' + (inv.remitThirdParty ? ' (' + escapeHtml(inv.remitThirdParty) + ')' : '') : '➡️ Direct'}</b></div>
+        ${inv.remitCompletedDate ? `<div class="row2"><span>Completed On</span><b>${fmtDate(inv.remitCompletedDate)}</b></div>` : ''}
         <div class="actions">
           <button onclick="openInvoiceModal('${id}')">✏️ Edit</button>
           <button class="danger" onclick="deleteInvoice('${id}')">🗑️ Delete</button>
@@ -453,6 +454,7 @@ function openInvoiceModal(id) {
     document.getElementById('f_balance_inr').value = inv.balanceInr !== undefined ? (inv.balanceInr || '') : (inv.balance || '');
     document.getElementById('f_remitType').value = inv.remitType || 'direct';
     document.getElementById('f_remitThirdParty').value = inv.remitThirdParty || '';
+    document.getElementById('f_remitCompletedDate').value = inv.remitCompletedDate || '';
     document.getElementById('f_tension').checked = !!inv.tension;
     document.getElementById('f_notes').value = inv.notes || '';
   } else {
@@ -470,6 +472,7 @@ function openInvoiceModal(id) {
     document.getElementById('f_balance_inr').value = '';
     document.getElementById('f_remitType').value = 'direct';
     document.getElementById('f_remitThirdParty').value = '';
+    document.getElementById('f_remitCompletedDate').value = '';
     document.getElementById('f_tension').checked = false;
     document.getElementById('f_notes').value = '';
   }
@@ -567,12 +570,28 @@ function recalcBalance() {
     balInrEl.value = balInr ? balInr : '';
     lockField('balance', 'inr');
   }
+  updateRemitCompletedDateVisibility();
+}
+function updateRemitCompletedDateVisibility() {
+  const totalUsd = Number(document.getElementById('f_total_usd').value) || 0;
+  const advUsd = Number(document.getElementById('f_advance_usd').value) || 0;
+  const balUsd = Number(document.getElementById('f_balance_usd').value) || 0;
+  const status = remitStatus(totalUsd, advUsd, balUsd);
+  const wrap = document.getElementById('remitCompletedDateWrap');
+  const dateInput = document.getElementById('f_remitCompletedDate');
+  if (status === 'completed') {
+    wrap.classList.remove('hidden');
+    if (!dateInput.value) dateInput.value = todayISO();
+  } else {
+    wrap.classList.add('hidden');
+  }
 }
 function updateBalanceHint() {
   recalcBalance();
   renderBalanceHintText();
 }
 function showBalanceHint() {
+  updateRemitCompletedDateVisibility();
   renderBalanceHintText();
 }
 function renderBalanceHintText() {
@@ -625,6 +644,10 @@ function saveInvoice() {
     addedBy: currentUser ? currentUser.name : 'Unknown',
     updatedAt: Date.now()
   };
+  const finalStatus = remitStatus(data.totalUsd, data.advanceUsd, data.balanceUsd);
+  data.remitCompletedDate = finalStatus === 'completed'
+    ? (document.getElementById('f_remitCompletedDate').value || todayISO())
+    : '';
   // legacy fields kept in sync (USD treated as the remittance currency of record)
   data.total = data.totalUsd;
   data.advance = data.advanceUsd;
@@ -931,6 +954,7 @@ function renderReportBody() {
         <div class="row2"><span>Total / Adv / Bal (USD)</span><b>${fmtUSD(i.totalUsd)} / ${fmtUSD(i.advanceUsd)} / ${fmtUSD(i.balanceUsd)}</b></div>
         ${(i.totalInr || i.advanceInr || i.balanceInr) ? `<div class="row2"><span>Total / Adv / Bal (INR)</span><b>${fmtMoney(i.totalInr)} / ${fmtMoney(i.advanceInr)} / ${fmtMoney(i.balanceInr)}</b></div>` : ''}
         <div class="row2"><span>Remittance</span><b>${i.remitType === '3rdparty' ? '🔁 3rd Party' + (i.remitThirdParty ? ' (' + escapeHtml(i.remitThirdParty) + ')' : '') : '➡️ Direct'}</b></div>
+        ${i.remitCompletedDate ? `<div class="row2"><span>Completed On</span><b>${fmtDate(i.remitCompletedDate)}</b></div>` : ''}
       </div>`;
   }).join('');
 }
@@ -975,6 +999,7 @@ function exportReportPDF() {
     const rows = entries.map(([id, i]) => [
       i.invNo, fmtDate(i.date), i.supplier, i.customer,
       statusLabel(remitStatus(i.total, i.advance, i.balance)),
+      i.remitCompletedDate ? fmtDate(i.remitCompletedDate) : '-',
       i.remitType === '3rdparty' ? ('3rd Party' + (i.remitThirdParty ? ': ' + i.remitThirdParty : '')) : 'Direct',
       i.tension ? 'Yes' : 'No',
       fmtUSD(i.totalUsd), fmtUSD(i.advanceUsd), fmtUSD(i.balanceUsd),
@@ -982,9 +1007,9 @@ function exportReportPDF() {
     ]);
     doc.autoTable({
       startY: 33,
-      head: [['Invoice', 'Date', 'Supplier', 'Customer', 'Remit', 'Remit Type', 'Issue', 'Total $', 'Adv $', 'Bal $', 'Total ₹', 'Adv ₹', 'Bal ₹']],
+      head: [['Invoice', 'Date', 'Supplier', 'Customer', 'Remit', 'Completed On', 'Remit Type', 'Issue', 'Total $', 'Adv $', 'Bal $', 'Total ₹', 'Adv ₹', 'Bal ₹']],
       body: rows,
-      styles: { fontSize: 5.8 }
+      styles: { fontSize: 5.5 }
     });
   }
   doc.save((titleMap[currentReportType] || 'report').replace(/\s+/g, '_') + '_' + todayISO() + '.pdf');
@@ -1031,6 +1056,7 @@ function exportReportExcel() {
       'Advance (INR)': i.advanceInr,
       'Balance (INR)': i.balanceInr,
       'Remittance Status': statusLabel(remitStatus(i.total, i.advance, i.balance)),
+      'Remittance Completed On': i.remitCompletedDate || '',
       'Remittance Type': i.remitType === '3rdparty' ? '3rd Party' : 'Direct',
       '3rd Party Name': i.remitType === '3rdparty' ? (i.remitThirdParty || '') : '',
       Issue: i.tension ? 'Yes' : 'No',
