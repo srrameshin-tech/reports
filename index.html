@@ -45,6 +45,23 @@
   .user-card:active { background:rgba(255,255,255,.16); }
   .user-card .av { font-family:'Space Grotesk',sans-serif; width:38px; height:38px; border-radius:9px; background:var(--customs-gold); color:#2a1c05; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
 
+  /* ---------- COMPANY SELECT ---------- */
+  #companyScreen { min-height:100vh; background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px, transparent 2px, transparent 14px),
+      linear-gradient(165deg,var(--cargo),var(--cargo-deep)); color:#fff; padding:24px; }
+  .company-select-wrap { min-height:calc(100vh - 48px); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .company-card { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; color:#fff; font-size:15px; font-weight:700; width:100%; transition:.15s; font-family:'Space Grotesk',sans-serif; }
+  .company-card:active { background:rgba(255,255,255,.16); }
+  .company-card .av { font-family:'IBM Plex Mono',monospace; width:38px; height:38px; border-radius:9px; background:var(--customs-gold); color:#2a1c05; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; font-size:13px; }
+  .company-pill { background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.2); color:#fff; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:6px; }
+
+  /* ---------- COMPANY MANAGEMENT (settings) ---------- */
+  .company-row { display:flex; align-items:center; justify-content:space-between; background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+  .company-row .name { font-weight:700; font-size:14px; font-family:'Space Grotesk',sans-serif; }
+  .company-row .acts { display:flex; gap:6px; }
+  .company-row .acts button { border:1px solid var(--line); background:var(--paper); border-radius:7px; padding:6px 10px; font-size:11px; font-weight:600; }
+  .company-row .acts button.danger { color:var(--stamp-red); border-color:#f0c4bd; }
+
   /* ---------- HEADER ---------- */
   header { background:linear-gradient(150deg,var(--cargo),var(--cargo-deep)); color:#fff; padding:18px 16px 16px; position:sticky; top:0; z-index:50; }
   header .row { display:flex; justify-content:space-between; align-items:center; }
@@ -151,12 +168,26 @@
   </div>
 </div>
 
+<!-- COMPANY SELECT -->
+<div id="companyScreen" class="hidden">
+  <div class="company-select-wrap">
+    <h1 style="margin-bottom:6px;">📦 Import Reports</h1>
+    <p style="opacity:.8;font-size:13px;margin-bottom:24px;">Select a company to continue</p>
+    <div id="companyListWrap" style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:340px;"></div>
+    <div id="companyListLoading" style="text-align:center;opacity:.8;font-size:13px;padding:16px;">Loading companies...</div>
+    <button class="btn-secondary" style="max-width:340px;margin-top:18px;" onclick="lockApp()">⬅ Back to Login</button>
+  </div>
+</div>
+
 <!-- MAIN APP -->
 <div id="app" class="hidden">
   <header>
     <div class="row">
-      <h2>📦 Import Reports</h2>
-      <button class="lock" onclick="lockApp()">🔒 Lock</button>
+      <h2 id="headerCompanyName">📦 Import Reports</h2>
+      <div style="display:flex;gap:8px;">
+        <button class="lock" onclick="openCompanySwitch()">⇄ Switch</button>
+        <button class="lock" onclick="lockApp()">🔒 Lock</button>
+      </div>
     </div>
     <div class="summary-strip">
       <div class="sum-card"><div class="n" id="sTotal">0</div><div class="l">Total Invoice</div></div>
@@ -213,7 +244,11 @@
     </div>
     <!-- SETTINGS TAB -->
     <div id="tab-settings" class="hidden">
-      <h3 style="margin-bottom:10px;color:#0f766e;">👥 Users</h3>
+      <h3 style="margin-bottom:10px;color:#0f766e;">🏢 Companies</h3>
+      <div id="settingsCompanyList"></div>
+      <button class="btn-secondary" onclick="openAddCompanyModal()">+ Add Company</button>
+
+      <h3 style="margin:22px 0 10px;color:#0f766e;">👥 Users</h3>
       <div id="settingsUserList"></div>
       <button class="btn-secondary" onclick="openAddUserModal()">+ Add User</button>
 
@@ -230,6 +265,20 @@
   </div>
 
   <button class="fab" id="fabAdd" onclick="openInvoiceModal()">+</button>
+</div>
+
+<!-- ADD/EDIT COMPANY MODAL -->
+<div id="companyModalOverlay" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <button class="close-x" onclick="closeCompanyModal()">✕</button>
+    <h3 id="companyModalTitle">Add Company</h3>
+    <div class="field">
+      <label>Company Name *</label>
+      <input type="text" id="co_name" placeholder="e.g. SJ IMPEX">
+    </div>
+    <button class="btn-primary" onclick="saveCompany()">Save Company</button>
+    <button class="btn-secondary" onclick="closeCompanyModal()">Cancel</button>
+  </div>
 </div>
 
 <!-- ADD USER MODAL -->
