@@ -451,9 +451,6 @@ function openInvoiceModal(id) {
     document.getElementById('f_total_inr').value = inv.totalInr !== undefined ? (inv.totalInr || '') : (inv.total || '');
     document.getElementById('f_advance_inr').value = inv.advanceInr !== undefined ? (inv.advanceInr || '') : (inv.advance || '');
     document.getElementById('f_balance_inr').value = inv.balanceInr !== undefined ? (inv.balanceInr || '') : (inv.balance || '');
-    // Mark loaded amount fields as manual so opening an existing invoice doesn't silently recalculate saved values
-    document.getElementById('f_balance_usd').dataset.manual = '1';
-    document.getElementById('f_balance_inr').dataset.manual = '1';
     document.getElementById('f_remitType').value = inv.remitType || 'direct';
     document.getElementById('f_remitThirdParty').value = inv.remitThirdParty || '';
     document.getElementById('f_tension').checked = !!inv.tension;
