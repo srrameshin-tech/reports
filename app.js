@@ -316,6 +316,9 @@ function attachInvoicesListener() {
   });
 }
 
+let supplierNames = [];
+let customerNames = [];
+
 function updateAutocompleteSuggestions() {
   const suppliers = new Set();
   const customers = new Set();
@@ -323,14 +326,35 @@ function updateAutocompleteSuggestions() {
     if (inv.supplier) suppliers.add(inv.supplier);
     if (inv.customer) customers.add(inv.customer);
   });
-  const supplierList = document.getElementById('supplierSuggestions');
-  const customerList = document.getElementById('customerSuggestions');
-  if (supplierList) {
-    supplierList.innerHTML = Array.from(suppliers).sort().map(s => `<option value="${escapeHtml(s)}">`).join('');
+  supplierNames = Array.from(suppliers).sort();
+  customerNames = Array.from(customers).sort();
+}
+
+function showSuggestions(field) {
+  const input = document.getElementById('f_' + field);
+  const wrap = document.getElementById(field + 'SuggestWrap');
+  const list = field === 'supplier' ? supplierNames : customerNames;
+  const query = input.value.trim().toLowerCase();
+  const matches = query
+    ? list.filter(n => n.toLowerCase().includes(query))
+    : list;
+  if (matches.length === 0) {
+    wrap.classList.add('hidden');
+    wrap.innerHTML = '';
+    return;
   }
-  if (customerList) {
-    customerList.innerHTML = Array.from(customers).sort().map(c => `<option value="${escapeHtml(c)}">`).join('');
-  }
+  wrap.innerHTML = matches.slice(0, 8).map(n =>
+    `<div class="suggest-item" onclick="selectSuggestion('${field}','${n.replace(/'/g, "\\'")}')">${escapeHtml(n)}</div>`
+  ).join('');
+  wrap.classList.remove('hidden');
+}
+function hideSuggestions(field) {
+  const wrap = document.getElementById(field + 'SuggestWrap');
+  wrap.classList.add('hidden');
+}
+function selectSuggestion(field, value) {
+  document.getElementById('f_' + field).value = value;
+  hideSuggestions(field);
 }
 
 function renderSummary() {
