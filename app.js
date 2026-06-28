@@ -318,22 +318,26 @@ function attachInvoicesListener() {
 
 let supplierNames = [];
 let customerNames = [];
+let referredByNames = [];
 
 function updateAutocompleteSuggestions() {
   const suppliers = new Set();
   const customers = new Set();
+  const referrers = new Set();
   Object.values(invoicesCache).forEach(inv => {
     if (inv.supplier) suppliers.add(inv.supplier);
     if (inv.customer) customers.add(inv.customer);
+    if (inv.referredBy) referrers.add(inv.referredBy);
   });
   supplierNames = Array.from(suppliers).sort();
   customerNames = Array.from(customers).sort();
+  referredByNames = Array.from(referrers).sort();
 }
 
 function showSuggestions(field) {
   const input = document.getElementById('f_' + field);
   const wrap = document.getElementById(field + 'SuggestWrap');
-  const list = field === 'supplier' ? supplierNames : customerNames;
+  const list = field === 'supplier' ? supplierNames : (field === 'customer' ? customerNames : referredByNames);
   const query = input.value.trim().toLowerCase();
   const matches = query
     ? list.filter(n => n.toLowerCase().includes(query))
@@ -409,6 +413,7 @@ function renderInvoiceList() {
         <div class="row2"><span>Supplier</span><b>${escapeHtml(inv.supplier || '-')}</b></div>
         <div class="row2"><span>Customer</span><b>${escapeHtml(inv.customer || '-')}</b></div>
         <div class="row2"><span>Package</span><b>${escapeHtml(truncate(inv.package, 40))}</b></div>
+        <div class="row2"><span>Referred By</span><b>${escapeHtml(inv.referredBy || '-')}</b></div>
         ${(inv.totalUsd || inv.totalInr) ? `<div class="row2"><span>Total</span><b>${inv.totalUsd ? fmtUSD(inv.totalUsd) : ''}${inv.totalUsd && inv.totalInr ? ' / ' : ''}${inv.totalInr ? fmtMoney(inv.totalInr) : ''}</b></div>` : ''}
         ${(inv.advanceUsd || inv.balanceUsd || inv.advanceInr || inv.balanceInr) ? `<div class="row2"><span>Advance / Balance</span><b>${fmtUSD(inv.advanceUsd)} / ${fmtUSD(inv.balanceUsd)}${(inv.advanceInr || inv.balanceInr) ? '  ·  ' + fmtMoney(inv.advanceInr) + ' / ' + fmtMoney(inv.balanceInr) : ''}</b></div>` : ''}
         ${inv.exRate ? `<div class="row2"><span>Exchange Rate</span><b>1 USD = ${fmtMoney(inv.exRate)}</b></div>` : ''}
@@ -443,6 +448,7 @@ function openInvoiceModal(id) {
     document.getElementById('f_supplier').value = inv.supplier || '';
     document.getElementById('f_customer').value = inv.customer || '';
     document.getElementById('f_package').value = inv.package || '';
+    document.getElementById('f_referredBy').value = inv.referredBy || '';
     document.getElementById('f_exrate').value = inv.exRate || '';
     // New invoices store totalUsd/advanceUsd/balanceUsd + totalInr/advanceInr/balanceInr.
     // Legacy invoices (before USD/INR split) stored total/advance/balance as a single INR-ish number — migrate those into the INR fields on edit.
@@ -463,6 +469,7 @@ function openInvoiceModal(id) {
     document.getElementById('f_supplier').value = '';
     document.getElementById('f_customer').value = '';
     document.getElementById('f_package').value = '';
+    document.getElementById('f_referredBy').value = '';
     document.getElementById('f_exrate').value = '';
     document.getElementById('f_total_usd').value = '';
     document.getElementById('f_advance_usd').value = '';
@@ -617,10 +624,11 @@ function saveInvoice() {
   const supplier = document.getElementById('f_supplier').value.trim();
   const customer = document.getElementById('f_customer').value.trim();
   const pkg = document.getElementById('f_package').value.trim();
+  const referredBy = document.getElementById('f_referredBy').value.trim();
   const remitType = document.getElementById('f_remitType').value;
   const remitThirdParty = document.getElementById('f_remitThirdParty').value.trim();
-  if (!invNo || !supplier || !customer || !pkg) {
-    toast('⚠️ Please fill Invoice No, Supplier, Customer, and Package');
+  if (!invNo || !supplier || !customer || !pkg || !referredBy) {
+    toast('⚠️ Please fill Invoice No, Supplier, Customer, Package, and Order Referred By');
     return;
   }
   if (remitType === '3rdparty' && !remitThirdParty) {
@@ -628,7 +636,7 @@ function saveInvoice() {
     return;
   }
   const data = {
-    invNo, supplier, customer, package: pkg,
+    invNo, supplier, customer, package: pkg, referredBy,
     date: document.getElementById('f_date').value || todayISO(),
     exRate: Number(document.getElementById('f_exrate').value) || 0,
     totalUsd: Number(document.getElementById('f_total_usd').value) || 0,
@@ -845,6 +853,7 @@ function openReport(type) {
     daterange: '📅 Date Range Report',
     tension: '⚠️ Issue / Pending Cases',
     remittance: '💰 Remittance Pending',
+    referredby: '🤝 Referred By Report',
     summary: '📈 Summary Dashboard'
   };
   document.getElementById('reportTitle').textContent = titles[type] || 'Report';
@@ -918,6 +927,36 @@ function renderReportBody() {
     return;
   }
 
+  if (currentReportType === 'referredby') {
+    const list = Object.values(invoicesCache);
+    const groups = {};
+    list.forEach(i => {
+      const ref = i.referredBy || 'Unspecified';
+      if (!groups[ref]) groups[ref] = { count: 0, totalUsd: 0, totalInr: 0, invoices: [] };
+      groups[ref].count++;
+      groups[ref].totalUsd += Number(i.totalUsd) || 0;
+      groups[ref].totalInr += Number(i.totalInr) || 0;
+      groups[ref].invoices.push(i.invNo);
+    });
+    const names = Object.keys(groups).sort((a, b) => groups[b].count - groups[a].count);
+    if (names.length === 0) {
+      body.innerHTML = '<div class="empty">No data for this report</div>';
+      return;
+    }
+    body.innerHTML = names.map(name => {
+      const g = groups[name];
+      return `
+        <div class="card">
+          <div class="inv" style="margin-bottom:6px;">${escapeHtml(name)}</div>
+          <div class="row2"><span>Orders Referred</span><b>${g.count}</b></div>
+          <div class="row2"><span>Total Value (USD)</span><b>${fmtUSD(g.totalUsd)}</b></div>
+          ${g.totalInr ? `<div class="row2"><span>Total Value (INR)</span><b>${fmtMoney(g.totalInr)}</b></div>` : ''}
+          <div class="row2"><span>Invoices</span><b style="font-size:11px;">${g.invoices.map(escapeHtml).join(', ')}</b></div>
+        </div>`;
+    }).join('');
+    return;
+  }
+
   if (entries.length === 0) {
     body.innerHTML = '<div class="empty">No data for this report</div>';
     return;
@@ -978,6 +1017,7 @@ function exportReportPDF() {
     daterange: 'Date Range Report',
     tension: 'Issue / Pending Cases Report',
     remittance: 'Remittance Pending Report',
+    referredby: 'Referred By Report',
     summary: 'Summary Dashboard'
   };
   doc.setFontSize(14);
@@ -1004,6 +1044,19 @@ function exportReportPDF() {
   } else if (currentReportType === 'package') {
     const rows = entries.map(([id, i]) => [i.invNo, i.package, i.supplier, i.customer]);
     doc.autoTable({ startY: 33, head: [['Invoice No', 'Package Details', 'Supplier', 'Customer']], body: rows, styles: { fontSize: 8 } });
+  } else if (currentReportType === 'referredby') {
+    const list = Object.values(invoicesCache);
+    const groups = {};
+    list.forEach(i => {
+      const ref = i.referredBy || 'Unspecified';
+      if (!groups[ref]) groups[ref] = { count: 0, totalUsd: 0, totalInr: 0 };
+      groups[ref].count++;
+      groups[ref].totalUsd += Number(i.totalUsd) || 0;
+      groups[ref].totalInr += Number(i.totalInr) || 0;
+    });
+    const names = Object.keys(groups).sort((a, b) => groups[b].count - groups[a].count);
+    const rows = names.map(name => [name, String(groups[name].count), fmtUSD(groups[name].totalUsd), fmtMoney(groups[name].totalInr)]);
+    doc.autoTable({ startY: 33, head: [['Referred By', 'Orders', 'Total (USD)', 'Total (INR)']], body: rows, styles: { fontSize: 8 } });
   } else {
     const rows = entries.map(([id, i]) => [
       i.invNo, fmtDate(i.date), i.supplier, i.customer,
@@ -1041,6 +1094,7 @@ function exportReportExcel() {
     daterange: 'Date_Range',
     tension: 'Issue_Cases',
     remittance: 'Remittance_Pending',
+    referredby: 'Referred_By',
     summary: 'Summary'
   };
   let rows;
@@ -1058,6 +1112,22 @@ function exportReportExcel() {
       { Metric: 'Total Advance Received (INR)', Value: list.reduce((s, i) => s + (Number(i.advanceInr) || 0), 0) },
       { Metric: 'Total Balance Due (INR)', Value: list.reduce((s, i) => s + (Number(i.balanceInr) || 0), 0) }
     ];
+  } else if (currentReportType === 'referredby') {
+    const list = Object.values(invoicesCache);
+    const groups = {};
+    list.forEach(i => {
+      const ref = i.referredBy || 'Unspecified';
+      if (!groups[ref]) groups[ref] = { count: 0, totalUsd: 0, totalInr: 0 };
+      groups[ref].count++;
+      groups[ref].totalUsd += Number(i.totalUsd) || 0;
+      groups[ref].totalInr += Number(i.totalInr) || 0;
+    });
+    rows = Object.keys(groups).sort((a, b) => groups[b].count - groups[a].count).map(name => ({
+      'Referred By': name,
+      'Orders Referred': groups[name].count,
+      'Total Value (USD)': groups[name].totalUsd,
+      'Total Value (INR)': groups[name].totalInr
+    }));
   } else {
     const entries = getReportData();
     rows = entries.map(([id, i]) => ({
@@ -1066,6 +1136,7 @@ function exportReportExcel() {
       Supplier: i.supplier,
       Customer: i.customer,
       Package: i.package,
+      'Referred By': i.referredBy || '',
       'Total (USD)': i.totalUsd,
       'Advance (USD)': i.advanceUsd,
       'Balance (USD)': i.balanceUsd,
