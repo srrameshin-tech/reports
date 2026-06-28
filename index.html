@@ -315,11 +315,13 @@
     </div>
     <div class="field">
       <label>Supplier Details *</label>
-      <input type="text" id="f_supplier" placeholder="Supplier name / company">
+      <input type="text" id="f_supplier" placeholder="Supplier name / company" list="supplierSuggestions" autocomplete="off">
+      <datalist id="supplierSuggestions"></datalist>
     </div>
     <div class="field">
       <label>Sales Company (Customer) *</label>
-      <input type="text" id="f_customer" placeholder="Customer / company name">
+      <input type="text" id="f_customer" placeholder="Customer / company name" list="customerSuggestions" autocomplete="off">
+      <datalist id="customerSuggestions"></datalist>
     </div>
     <div class="field">
       <label>Package Details *</label>
