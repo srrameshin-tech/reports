@@ -961,9 +961,18 @@ function renderReportBody() {
 
 /* ====================== EXPORT: PDF ====================== */
 function exportReportPDF() {
-  const entries = currentReportType === 'summary' ? null : getReportData();
-  const doc = new jspdf.jsPDF();
-  const titleMap = {
+  try {
+    if (typeof jspdf === 'undefined' || !jspdf.jsPDF) {
+      toast('⚠️ PDF library not loaded. Check your internet connection and try again.');
+      return;
+    }
+    const entries = currentReportType === 'summary' ? null : getReportData();
+    const doc = new jspdf.jsPDF();
+    if (typeof doc.autoTable !== 'function') {
+      toast('⚠️ PDF table plugin not loaded. Check your internet connection and try again.');
+      return;
+    }
+    const titleMap = {
     invoice: 'Invoice-wise Status Report',
     package: 'Package-wise Status Report',
     daterange: 'Date Range Report',
@@ -1014,11 +1023,19 @@ function exportReportPDF() {
   }
   doc.save((titleMap[currentReportType] || 'report').replace(/\s+/g, '_') + '_' + todayISO() + '.pdf');
   toast('📄 PDF downloaded');
+  } catch (err) {
+    toast('⚠️ PDF error: ' + err.message);
+  }
 }
 
 /* ====================== EXPORT: EXCEL ====================== */
 function exportReportExcel() {
-  const titleMap = {
+  try {
+    if (typeof XLSX === 'undefined') {
+      toast('⚠️ Excel library not loaded. Check your internet connection and try again.');
+      return;
+    }
+    const titleMap = {
     invoice: 'Invoice_Status',
     package: 'Package_Status',
     daterange: 'Date_Range',
@@ -1069,6 +1086,9 @@ function exportReportExcel() {
   XLSX.utils.book_append_sheet(wb, ws, 'Report');
   XLSX.writeFile(wb, (titleMap[currentReportType] || 'report') + '_' + todayISO() + '.xlsx');
   toast('📊 Excel downloaded');
+  } catch (err) {
+    toast('⚠️ Excel error: ' + err.message);
+  }
 }
 
 /* ====================== INIT ====================== */
