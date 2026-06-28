@@ -241,6 +241,10 @@
         <span class="ic">💰</span>
         <span class="txt"><b>Remittance Pending</b><span>Advance/Balance dues</span></span>
       </button>
+      <button class="report-btn" onclick="openReport('referredby')">
+        <span class="ic">🤝</span>
+        <span class="txt"><b>Referred By Report</b><span>Orders grouped by referrer</span></span>
+      </button>
       <button class="report-btn" onclick="openReport('summary')">
         <span class="ic">📈</span>
         <span class="txt"><b>Summary Dashboard</b><span>All totals in one view</span></span>
@@ -330,6 +334,11 @@
     <div class="field">
       <label>Package Details *</label>
       <textarea id="f_package" placeholder="Item description, qty, packages etc."></textarea>
+    </div>
+    <div class="field" style="position:relative;">
+      <label>Order Referred By *</label>
+      <input type="text" id="f_referredBy" placeholder="Name of the person who referred this order" autocomplete="off" oninput="showSuggestions('referredBy')" onfocus="showSuggestions('referredBy')" onblur="setTimeout(()=>hideSuggestions('referredBy'),150)">
+      <div class="suggest-dropdown hidden" id="referredBySuggestWrap"></div>
     </div>
 
     <div class="field">
