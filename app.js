@@ -780,8 +780,8 @@ function renderSettingsUserList() {
             <span style="font-size:14px;font-weight:600;">${escapeHtml(u.name)}</span>
           </div>
           <div style="display:flex;gap:6px;">
-            <button onclick="editUserPin('${uid}','${escapeHtml(u.name)}')" style="border:1px solid #ddd;background:#fafafa;border-radius:8px;padding:6px 10px;font-size:11px;">Change PIN</button>
-            <button onclick="deleteUser('${uid}')" style="border:1px solid #fecaca;color:#dc2626;background:#fff;border-radius:8px;padding:6px 10px;font-size:11px;">Remove</button>
+            <button onclick="editUserPin('${uid}','${escapeHtml(u.name)}')" style="border:1.5px solid #0c4f49;background:#e3efed;color:#0c4f49;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;">Change PIN</button>
+            <button onclick="deleteUser('${uid}')" style="border:1.5px solid #a8362a;color:#fff;background:#a8362a;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;">Remove</button>
           </div>
         </div>`;
     }).join('');
