@@ -18,8 +18,12 @@ let currentUser = null;       // {id, name}
 let pendingLoginUser = null;  // user being PIN-verified
 let enteredPin = "";
 let usersCache = {};          // {uid: {name, pin}}
+let companiesCache = {};      // {cid: {name}}
+let currentCompanyId = null;
+let currentCompanyName = '';
 let invoicesCache = {};       // {invId: {...}}
 let editingInvoiceId = null;
+let editingCompanyId = null;
 let listFilter = "all";
 let currentReportType = null;
 
@@ -196,26 +200,95 @@ function anonAuthThenBootstrap() {
 
 function doFirebaseSignInAndEnterApp() {
   if (auth.currentUser) {
-    enterApp();
+    showCompanySelect();
   } else {
-    auth.signInAnonymously().then(enterApp).catch(err => {
+    auth.signInAnonymously().then(showCompanySelect).catch(err => {
       toast('Login error: ' + err.message);
     });
   }
 }
 
-function enterApp() {
+function showCompanySelect() {
   document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('companyScreen').classList.remove('hidden');
+  loadCompaniesForSelect();
+}
+
+function loadCompaniesForSelect() {
+  const wrap = document.getElementById('companyListWrap');
+  const loading = document.getElementById('companyListLoading');
+  wrap.innerHTML = '';
+  loading.classList.remove('hidden');
+  loading.textContent = 'Loading companies...';
+  db.ref(ROOT + '/companies').once('value').then(snap => {
+    companiesCache = snap.val() || {};
+    if (Object.keys(companiesCache).length === 0) {
+      loading.textContent = 'No companies yet. Add one from Settings after entering any company, or tap below.';
+      const btn = document.createElement('button');
+      btn.className = 'btn-secondary';
+      btn.style.maxWidth = '340px';
+      btn.textContent = '+ Add First Company';
+      btn.onclick = () => openAddCompanyModal();
+      wrap.appendChild(btn);
+      return;
+    }
+    loading.classList.add('hidden');
+    renderCompanySelectList();
+  }).catch(err => {
+    loading.textContent = 'Connection error: ' + err.message;
+  });
+}
+
+function renderCompanySelectList() {
+  const wrap = document.getElementById('companyListWrap');
+  wrap.innerHTML = '';
+  Object.keys(companiesCache).forEach(cid => {
+    const c = companiesCache[cid];
+    const card = document.createElement('button');
+    card.className = 'company-card';
+    card.innerHTML = `<span class="av">${initials(c.name)}</span><span>${escapeHtml(c.name)}</span>`;
+    card.onclick = () => enterCompany(cid, c.name);
+    wrap.appendChild(card);
+  });
+}
+
+function enterCompany(cid, name) {
+  currentCompanyId = cid;
+  currentCompanyName = name;
+  document.getElementById('companyScreen').classList.add('hidden');
+  enterApp();
+}
+
+function openCompanySwitch() {
+  // Detach old listener before switching company data context
+  db.ref(ROOT + '/invoices/' + currentCompanyId).off();
+  currentCompanyId = null;
+  currentCompanyName = '';
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('companyScreen').classList.remove('hidden');
+  loadCompaniesForSelect();
+}
+
+function enterApp() {
   document.getElementById('app').classList.remove('hidden');
+  document.getElementById('headerCompanyName').textContent = '📦 ' + currentCompanyName;
   attachInvoicesListener();
   renderSettingsUserList();
+  renderSettingsCompanyList();
 }
 
 function lockApp() {
   currentUser = null;
   pendingLoginUser = null;
   enteredPin = '';
+  if (currentCompanyId) {
+    db.ref(ROOT + '/invoices/' + currentCompanyId).off();
+  }
+  currentCompanyId = null;
+  currentCompanyName = '';
   document.getElementById('app').classList.add('hidden');
+  document.getElementById('companyScreen').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('pinEntryBox').classList.add('hidden');
   document.getElementById('userSelectBox').classList.remove('hidden');
@@ -234,7 +307,8 @@ function switchTab(tab) {
 
 /* ====================== INVOICES: LIVE DATA ====================== */
 function attachInvoicesListener() {
-  db.ref(ROOT + '/invoices').on('value', snap => {
+  if (!currentCompanyId) return;
+  db.ref(ROOT + '/invoices/' + currentCompanyId).on('value', snap => {
     invoicesCache = snap.val() || {};
     renderSummary();
     renderInvoiceList();
@@ -517,16 +591,16 @@ function saveInvoice() {
   data.advance = data.advanceUsd;
   data.balance = data.balanceUsd;
   const ref = editingInvoiceId
-    ? db.ref(ROOT + '/invoices/' + editingInvoiceId)
-    : db.ref(ROOT + '/invoices').push();
+    ? db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + editingInvoiceId)
+    : db.ref(ROOT + '/invoices/' + currentCompanyId).push();
   if (!editingInvoiceId) data.createdAt = Date.now();
   if (editingInvoiceId) {
-    db.ref(ROOT + '/invoices/' + editingInvoiceId).update(data).then(() => {
+    db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + editingInvoiceId).update(data).then(() => {
       toast('✅ Invoice updated');
       closeInvoiceModal();
     }).catch(err => toast('Error: ' + err.message));
   } else {
-    db.ref(ROOT + '/invoices').push(data).then(() => {
+    db.ref(ROOT + '/invoices/' + currentCompanyId).push(data).then(() => {
       toast('✅ Invoice saved');
       closeInvoiceModal();
     }).catch(err => toast('Error: ' + err.message));
@@ -534,7 +608,85 @@ function saveInvoice() {
 }
 function deleteInvoice(id) {
   if (!confirm('Delete this invoice? This is permanent.')) return;
-  db.ref(ROOT + '/invoices/' + id).remove().then(() => toast('🗑️ Deleted'));
+  db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + id).remove().then(() => toast('🗑️ Deleted'));
+}
+
+/* ====================== SETTINGS: COMPANIES ====================== */
+function renderSettingsCompanyList() {
+  db.ref(ROOT + '/companies').once('value').then(snap => {
+    const companies = snap.val() || {};
+    companiesCache = companies;
+    const wrap = document.getElementById('settingsCompanyList');
+    const ids = Object.keys(companies);
+    if (ids.length === 0) {
+      wrap.innerHTML = '<p style="font-size:12px;color:#888;">No companies found</p>';
+      return;
+    }
+    wrap.innerHTML = ids.map(cid => {
+      const c = companies[cid];
+      const isCurrent = cid === currentCompanyId;
+      return `
+        <div class="company-row">
+          <span class="name">${escapeHtml(c.name)}${isCurrent ? ' <span style="color:var(--cargo);font-size:11px;">(current)</span>' : ''}</span>
+          <div class="acts">
+            <button onclick="openEditCompanyModal('${cid}')">Edit</button>
+            <button class="danger" onclick="deleteCompany('${cid}','${escapeHtml(c.name)}')">Delete</button>
+          </div>
+        </div>`;
+    }).join('');
+  });
+}
+function openAddCompanyModal() {
+  editingCompanyId = null;
+  document.getElementById('companyModalTitle').textContent = 'Add Company';
+  document.getElementById('co_name').value = '';
+  document.getElementById('companyModalOverlay').classList.remove('hidden');
+}
+function openEditCompanyModal(cid) {
+  editingCompanyId = cid;
+  document.getElementById('companyModalTitle').textContent = 'Edit Company';
+  document.getElementById('co_name').value = (companiesCache[cid] && companiesCache[cid].name) || '';
+  document.getElementById('companyModalOverlay').classList.remove('hidden');
+}
+function closeCompanyModal() {
+  document.getElementById('companyModalOverlay').classList.add('hidden');
+  editingCompanyId = null;
+}
+function saveCompany() {
+  const name = document.getElementById('co_name').value.trim();
+  if (!name) {
+    toast('⚠️ Please enter a company name');
+    return;
+  }
+  if (editingCompanyId) {
+    db.ref(ROOT + '/companies/' + editingCompanyId + '/name').set(name).then(() => {
+      toast('✅ Company updated');
+      if (editingCompanyId === currentCompanyId) {
+        currentCompanyName = name;
+        document.getElementById('headerCompanyName').textContent = '📦 ' + currentCompanyName;
+      }
+      closeCompanyModal();
+      renderSettingsCompanyList();
+    }).catch(err => toast('Error: ' + err.message));
+  } else {
+    db.ref(ROOT + '/companies').push({ name }).then(() => {
+      toast('✅ Company added');
+      closeCompanyModal();
+      renderSettingsCompanyList();
+    }).catch(err => toast('Error: ' + err.message));
+  }
+}
+function deleteCompany(cid, name) {
+  if (cid === currentCompanyId) {
+    toast('⚠️ Switch to another company before deleting this one');
+    return;
+  }
+  if (!confirm(`Delete "${name}"? This will permanently delete all its invoices too.`)) return;
+  db.ref(ROOT + '/companies/' + cid).remove().then(() => {
+    db.ref(ROOT + '/invoices/' + cid).remove();
+    toast('🗑️ Company deleted');
+    renderSettingsCompanyList();
+  }).catch(err => toast('Error: ' + err.message));
 }
 
 /* ====================== SETTINGS: USERS ====================== */
