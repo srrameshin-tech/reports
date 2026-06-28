@@ -210,6 +210,9 @@
   <div class="content">
     <!-- LIST TAB -->
     <div id="tab-list">
+      <div class="field" style="margin-bottom:12px;">
+        <input type="text" id="listSearchBox" placeholder="🔍 Search Invoice No, Supplier, Customer, Referred By..." oninput="renderInvoiceList()" style="font-weight:600;">
+      </div>
       <div class="filter-bar" id="listFilterBar">
         <button class="filter-chip active" data-f="all" onclick="setListFilter('all')">All</button>
         <button class="filter-chip" data-f="tension" onclick="setListFilter('tension')">⚠️ Issue</button>
@@ -427,6 +430,9 @@
       <div class="field"><label>To</label><input type="date" id="rep_to"></div>
     </div>
     <button class="btn-secondary hidden" id="rep_applyDate" onclick="renderReportBody()">Apply Filter</button>
+    <div class="field" id="reportSearchWrap" style="margin-bottom:10px;">
+      <input type="text" id="reportSearchBox" placeholder="🔍 Search Invoice No, Supplier, Customer, Referred By..." oninput="renderReportBody()" style="font-weight:600;">
+    </div>
     <div id="reportBody"></div>
     <button class="btn-primary" onclick="exportReportPDF()">📄 Download PDF</button>
     <button class="btn-secondary" onclick="exportReportExcel()">📊 Download Excel</button>
