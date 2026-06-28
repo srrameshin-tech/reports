@@ -59,8 +59,8 @@
   .company-row { display:flex; align-items:center; justify-content:space-between; background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
   .company-row .name { font-weight:700; font-size:14px; font-family:'Space Grotesk',sans-serif; }
   .company-row .acts { display:flex; gap:6px; }
-  .company-row .acts button { border:1px solid var(--line); background:var(--paper); border-radius:7px; padding:6px 10px; font-size:11px; font-weight:600; }
-  .company-row .acts button.danger { color:var(--stamp-red); border-color:#f0c4bd; }
+  .company-row .acts button { border:1.5px solid var(--cargo); background:var(--cargo-light); color:var(--cargo); border-radius:7px; padding:7px 12px; font-size:12px; font-weight:700; }
+  .company-row .acts button.danger { color:#fff; background:var(--stamp-red); border-color:var(--stamp-red); }
 
   /* ---------- HEADER ---------- */
   header { background:linear-gradient(150deg,var(--cargo),var(--cargo-deep)); color:#fff; padding:18px 16px 16px; position:sticky; top:0; z-index:50; }
@@ -254,7 +254,7 @@
     <div id="tab-settings" class="hidden">
       <h3 style="margin-bottom:10px;color:#0f766e;">🏢 Companies</h3>
       <div id="settingsCompanyList"></div>
-      <button class="btn-secondary" onclick="openAddCompanyModal()">+ Add Company</button>
+      <button class="btn-secondary" style="border:2px solid var(--cargo);color:var(--cargo);" onclick="openAddCompanyModal()">+ Add Company</button>
 
       <h3 style="margin:22px 0 10px;color:#0f766e;">👥 Users</h3>
       <div id="settingsUserList"></div>
