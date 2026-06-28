@@ -385,14 +385,28 @@ function getFilteredInvoices() {
   if (listFilter === 'tension') entries = entries.filter(([id, i]) => i.tension);
   else if (listFilter === 'pending') entries = entries.filter(([id, i]) => remitStatus(i.total, i.advance, i.balance) !== 'completed');
   else if (listFilter === 'completed') entries = entries.filter(([id, i]) => remitStatus(i.total, i.advance, i.balance) === 'completed');
+  const searchEl = document.getElementById('listSearchBox');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  if (q) {
+    entries = entries.filter(([id, i]) => matchesSearch(i, q));
+  }
   return entries;
+}
+
+function matchesSearch(inv, q) {
+  return [inv.invNo, inv.supplier, inv.customer, inv.referredBy, inv.package]
+    .some(field => field && String(field).toLowerCase().includes(q));
 }
 
 function renderInvoiceList() {
   const wrap = document.getElementById('invoiceList');
   const entries = getFilteredInvoices();
   if (entries.length === 0) {
-    wrap.innerHTML = '<div class="empty">📭 No invoices yet.<br>Tap the + button below to add one.</div>';
+    const searchEl = document.getElementById('listSearchBox');
+    const hasSearch = searchEl && searchEl.value.trim();
+    wrap.innerHTML = hasSearch
+      ? '<div class="empty">🔍 No invoices match your search.</div>'
+      : '<div class="empty">📭 No invoices yet.<br>Tap the + button below to add one.</div>';
     return;
   }
   wrap.innerHTML = entries.map(([id, inv]) => {
@@ -860,6 +874,13 @@ function openReport(type) {
   document.getElementById('reportTitle').textContent = titles[type] || 'Report';
   const dateFilterWrap = document.getElementById('reportDateFilter');
   const applyBtn = document.getElementById('rep_applyDate');
+  const searchWrap = document.getElementById('reportSearchWrap');
+  document.getElementById('reportSearchBox').value = '';
+  if (type === 'summary' || type === 'referredby') {
+    searchWrap.classList.add('hidden');
+  } else {
+    searchWrap.classList.remove('hidden');
+  }
   if (type === 'daterange') {
     dateFilterWrap.classList.remove('hidden');
     applyBtn.classList.remove('hidden');
@@ -892,6 +913,11 @@ function getReportData() {
       if (to && i.date > to) return false;
       return true;
     });
+  }
+  const searchEl = document.getElementById('reportSearchBox');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  if (q) {
+    entries = entries.filter(([id, i]) => matchesSearch(i, q));
   }
   entries.sort((a, b) => (a[1].date || '').localeCompare(b[1].date || ''));
   return entries;
