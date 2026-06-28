@@ -312,7 +312,25 @@ function attachInvoicesListener() {
     invoicesCache = snap.val() || {};
     renderSummary();
     renderInvoiceList();
+    updateAutocompleteSuggestions();
   });
+}
+
+function updateAutocompleteSuggestions() {
+  const suppliers = new Set();
+  const customers = new Set();
+  Object.values(invoicesCache).forEach(inv => {
+    if (inv.supplier) suppliers.add(inv.supplier);
+    if (inv.customer) customers.add(inv.customer);
+  });
+  const supplierList = document.getElementById('supplierSuggestions');
+  const customerList = document.getElementById('customerSuggestions');
+  if (supplierList) {
+    supplierList.innerHTML = Array.from(suppliers).sort().map(s => `<option value="${escapeHtml(s)}">`).join('');
+  }
+  if (customerList) {
+    customerList.innerHTML = Array.from(customers).sort().map(c => `<option value="${escapeHtml(c)}">`).join('');
+  }
 }
 
 function renderSummary() {
