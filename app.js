@@ -19,6 +19,7 @@ let pendingLoginUser = null;  // user being PIN-verified
 let enteredPin = "";
 let usersCache = {};          // {uid: {name, pin}}
 let companiesCache = {};      // {cid: {name}}
+let companyInvoiceCounts = {}; // {cid: count}
 let currentCompanyId = null;
 let currentCompanyName = '';
 let invoicesCache = {};       // {invId: {...}}
@@ -50,6 +51,15 @@ function fmtDate(d) {
 }
 function todayISO() {
   return new Date().toISOString().split('T')[0];
+}
+function getNextSerialNo() {
+  const list = Object.values(invoicesCache);
+  let max = 0;
+  list.forEach(inv => {
+    const n = Number(inv.serialNo) || 0;
+    if (n > max) max = n;
+  });
+  return String(max + 1);
 }
 function remitStatus(total, advance, balance) {
   total = Number(total) || 0;
@@ -221,8 +231,16 @@ function loadCompaniesForSelect() {
   wrap.innerHTML = '';
   loading.classList.remove('hidden');
   loading.textContent = 'Loading companies...';
-  db.ref(ROOT + '/companies').once('value').then(snap => {
-    companiesCache = snap.val() || {};
+  Promise.all([
+    db.ref(ROOT + '/companies').once('value'),
+    db.ref(ROOT + '/invoices').once('value')
+  ]).then(([companiesSnap, invoicesSnap]) => {
+    companiesCache = companiesSnap.val() || {};
+    const allInvoices = invoicesSnap.val() || {};
+    companyInvoiceCounts = {};
+    Object.keys(allInvoices).forEach(cid => {
+      companyInvoiceCounts[cid] = Object.keys(allInvoices[cid] || {}).length;
+    });
     if (Object.keys(companiesCache).length === 0) {
       loading.textContent = 'No companies yet. Add one from Settings after entering any company, or tap below.';
       const btn = document.createElement('button');
@@ -245,9 +263,11 @@ function renderCompanySelectList() {
   wrap.innerHTML = '';
   Object.keys(companiesCache).forEach(cid => {
     const c = companiesCache[cid];
+    const count = companyInvoiceCounts[cid] || 0;
     const card = document.createElement('button');
     card.className = 'company-card';
-    card.innerHTML = `<span class="av">${initials(c.name)}</span><span>${escapeHtml(c.name)}</span>`;
+    card.innerHTML = `<span class="av">${initials(c.name)}</span><span style="flex:1;text-align:left;">${escapeHtml(c.name)}</span><span class="company-pill">${count} invoice${count === 1 ? '' : 's'}</span>`;
+    card.style.justifyContent = 'space-between';
     card.onclick = () => enterCompany(cid, c.name);
     wrap.appendChild(card);
   });
@@ -394,7 +414,7 @@ function getFilteredInvoices() {
 }
 
 function matchesSearch(inv, q) {
-  return [inv.invNo, inv.supplier, inv.customer, inv.referredBy, inv.package]
+  return [inv.invNo, inv.supplier, inv.customer, inv.referredBy, inv.package, inv.serialNo]
     .some(field => field && String(field).toLowerCase().includes(q));
 }
 
@@ -416,7 +436,7 @@ function renderInvoiceList() {
       <div class="card ${cardClass}">
         <div class="top">
           <div>
-            <div class="inv">🧾 ${escapeHtml(inv.invNo || '-')}</div>
+            <div class="inv">${inv.serialNo ? '#' + escapeHtml(inv.serialNo) + ' · ' : ''}🧾 ${escapeHtml(inv.invNo || '-')}</div>
             <div class="date">${fmtDate(inv.date)}${inv.addedBy ? ' · by ' + escapeHtml(inv.addedBy) : ''}</div>
           </div>
         </div>
@@ -458,6 +478,7 @@ function openInvoiceModal(id) {
   unlockAllFields();
   if (id && invoicesCache[id]) {
     const inv = invoicesCache[id];
+    document.getElementById('f_serialNo').value = inv.serialNo || getNextSerialNo();
     document.getElementById('f_invno').value = inv.invNo || '';
     document.getElementById('f_date').value = inv.date || '';
     document.getElementById('f_supplier').value = inv.supplier || '';
@@ -479,6 +500,7 @@ function openInvoiceModal(id) {
     document.getElementById('f_tension').checked = !!inv.tension;
     document.getElementById('f_notes').value = inv.notes || '';
   } else {
+    document.getElementById('f_serialNo').value = getNextSerialNo();
     document.getElementById('f_invno').value = '';
     document.getElementById('f_date').value = todayISO();
     document.getElementById('f_supplier').value = '';
@@ -652,6 +674,7 @@ function saveInvoice() {
   }
   const data = {
     invNo, supplier, customer, package: pkg, referredBy,
+    serialNo: document.getElementById('f_serialNo').value,
     date: document.getElementById('f_date').value || todayISO(),
     exRate: Number(document.getElementById('f_exrate').value) || 0,
     totalUsd: Number(document.getElementById('f_total_usd').value) || 0,
@@ -698,9 +721,17 @@ function deleteInvoice(id) {
 
 /* ====================== SETTINGS: COMPANIES ====================== */
 function renderSettingsCompanyList() {
-  db.ref(ROOT + '/companies').once('value').then(snap => {
-    const companies = snap.val() || {};
+  Promise.all([
+    db.ref(ROOT + '/companies').once('value'),
+    db.ref(ROOT + '/invoices').once('value')
+  ]).then(([companiesSnap, invoicesSnap]) => {
+    const companies = companiesSnap.val() || {};
     companiesCache = companies;
+    const allInvoices = invoicesSnap.val() || {};
+    companyInvoiceCounts = {};
+    Object.keys(allInvoices).forEach(cid => {
+      companyInvoiceCounts[cid] = Object.keys(allInvoices[cid] || {}).length;
+    });
     const wrap = document.getElementById('settingsCompanyList');
     const ids = Object.keys(companies);
     if (ids.length === 0) {
@@ -710,9 +741,10 @@ function renderSettingsCompanyList() {
     wrap.innerHTML = ids.map(cid => {
       const c = companies[cid];
       const isCurrent = cid === currentCompanyId;
+      const count = companyInvoiceCounts[cid] || 0;
       return `
         <div class="company-row">
-          <span class="name">${escapeHtml(c.name)}${isCurrent ? ' <span style="color:var(--cargo);font-size:11px;">(current)</span>' : ''}</span>
+          <span class="name">${escapeHtml(c.name)}${isCurrent ? ' <span style="color:var(--cargo);font-size:11px;">(current)</span>' : ''}<br><span style="font-size:11px;color:#6b6557;font-weight:600;">${count} invoice${count === 1 ? '' : 's'}</span></span>
           <div class="acts">
             <button onclick="openEditCompanyModal('${cid}')">Edit</button>
             <button class="danger" onclick="deleteCompany('${cid}','${escapeHtml(c.name)}')">Delete</button>
@@ -1007,7 +1039,7 @@ function renderReportBody() {
       <div class="card ${i.tension ? 'tension' : (rs === 'completed' ? 'ok' : '')}">
         <div class="top">
           <div>
-            <div class="inv">${escapeHtml(i.invNo)}</div>
+            <div class="inv">${i.serialNo ? '#' + escapeHtml(i.serialNo) + ' · ' : ''}${escapeHtml(i.invNo)}</div>
             <div class="date">${fmtDate(i.date)}</div>
           </div>
         </div>
@@ -1087,7 +1119,7 @@ function exportReportPDF() {
     doc.autoTable({ startY: 33, head: [['Referred By', 'Orders', 'Total (USD)', 'Total (INR)']], body: rows, styles: { fontSize: 8 } });
   } else {
     const rows = entries.map(([id, i]) => [
-      i.invNo, fmtDate(i.date), i.supplier, i.customer,
+      i.serialNo || '-', i.invNo, fmtDate(i.date), i.supplier, i.customer,
       statusLabel(remitStatus(i.total, i.advance, i.balance)),
       i.remitCompletedDate ? fmtDate(i.remitCompletedDate) : '-',
       i.remitType === '3rdparty' ? ('3rd Party' + (i.remitThirdParty ? ': ' + i.remitThirdParty : '')) : 'Direct',
@@ -1097,9 +1129,9 @@ function exportReportPDF() {
     ]);
     doc.autoTable({
       startY: 33,
-      head: [['Invoice', 'Date', 'Supplier', 'Customer', 'Remit', 'Completed On', 'Remit Type', 'Issue', 'Total $', 'Adv $', 'Bal $', 'Total ₹', 'Adv ₹', 'Bal ₹']],
+      head: [['S.No', 'Invoice', 'Date', 'Supplier', 'Customer', 'Remit', 'Completed On', 'Remit Type', 'Issue', 'Total $', 'Adv $', 'Bal $', 'Total ₹', 'Adv ₹', 'Bal ₹']],
       body: rows,
-      styles: { fontSize: 5.5 }
+      styles: { fontSize: 5.2 }
     });
   }
   doc.save((titleMap[currentReportType] || 'report').replace(/\s+/g, '_') + '_' + todayISO() + '.pdf');
@@ -1159,6 +1191,7 @@ function exportReportExcel() {
   } else {
     const entries = getReportData();
     rows = entries.map(([id, i]) => ({
+      'Serial No': i.serialNo || '',
       'Invoice No': i.invNo,
       Date: i.date,
       Supplier: i.supplier,
