@@ -717,7 +717,29 @@ function saveInvoice() {
 }
 function deleteInvoice(id) {
   if (!confirm('Delete this invoice? This is permanent.')) return;
-  db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + id).remove().then(() => toast('🗑️ Deleted'));
+  const deletedInv = invoicesCache[id];
+  const deletedSerial = Number(deletedInv && deletedInv.serialNo) || 0;
+  db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + id).remove().then(() => {
+    if (deletedSerial > 0) {
+      renumberSerialsAfterDelete(deletedSerial);
+    }
+    toast('🗑️ Deleted');
+  });
+}
+
+function renumberSerialsAfterDelete(deletedSerial) {
+  // Shift down by 1 the serial number of every invoice that had a higher serial than the one just deleted,
+  // so numbering stays gap-free and sequential (1, 2, 3...).
+  const updates = {};
+  Object.entries(invoicesCache).forEach(([invId, inv]) => {
+    const n = Number(inv.serialNo) || 0;
+    if (n > deletedSerial) {
+      updates[invId + '/serialNo'] = String(n - 1);
+    }
+  });
+  if (Object.keys(updates).length > 0) {
+    db.ref(ROOT + '/invoices/' + currentCompanyId).update(updates);
+  }
 }
 
 /* ====================== SETTINGS: COMPANIES ====================== */
