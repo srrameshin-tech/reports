@@ -744,7 +744,7 @@ function renderSettingsCompanyList() {
       const count = companyInvoiceCounts[cid] || 0;
       return `
         <div class="company-row">
-          <span class="name">${escapeHtml(c.name)}${isCurrent ? ' <span style="color:var(--cargo);font-size:11px;">(current)</span>' : ''}<br><span style="font-size:11px;color:#6b6557;font-weight:600;">${count} invoice${count === 1 ? '' : 's'}</span></span>
+          <span class="name">${escapeHtml(c.name)}${isCurrent ? ' <span style="color:var(--cargo);font-size:11px;">(current)</span>' : ''}<br><span style="font-size:12px;color:var(--cargo);font-weight:800;background:var(--cargo-light);padding:2px 8px;border-radius:6px;display:inline-block;margin-top:4px;">${count} invoice${count === 1 ? '' : 's'}</span></span>
           <div class="acts">
             <button onclick="openEditCompanyModal('${cid}')">Edit</button>
             <button class="danger" onclick="deleteCompany('${cid}','${escapeHtml(c.name)}')">Delete</button>
