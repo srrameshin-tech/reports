@@ -436,8 +436,8 @@ function renderInvoiceList() {
       <div class="card ${cardClass}">
         <div class="top">
           <div>
-            <div class="inv">${inv.serialNo ? '#' + escapeHtml(inv.serialNo) + ' · ' : ''}🧾 ${escapeHtml(inv.invNo || '-')}</div>
-            <div class="date">${fmtDate(inv.date)}${inv.addedBy ? ' · by ' + escapeHtml(inv.addedBy) : ''}</div>
+            <div class="inv">${inv.serialNo ? '#' + escapeHtml(inv.serialNo) + ' · ' : ''}🧾 ${escapeHtml(inv.invNo || '-')} - ${fmtDate(inv.date)}</div>
+            <div class="date">${inv.addedBy ? 'by ' + escapeHtml(inv.addedBy) : ''}</div>
           </div>
         </div>
         <div class="badges">
@@ -1062,8 +1062,7 @@ function renderReportBody() {
       <div class="card ${i.tension ? 'tension' : (rs === 'completed' ? 'ok' : '')}">
         <div class="top">
           <div>
-            <div class="inv">${i.serialNo ? '#' + escapeHtml(i.serialNo) + ' · ' : ''}${escapeHtml(i.invNo)}</div>
-            <div class="date">${fmtDate(i.date)}</div>
+            <div class="inv">${i.serialNo ? '#' + escapeHtml(i.serialNo) + ' · ' : ''}${escapeHtml(i.invNo)} - ${fmtDate(i.date)}</div>
           </div>
         </div>
         <div class="badges">
