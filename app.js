@@ -444,8 +444,8 @@ function renderInvoiceList() {
           <span class="badge ${rs}">💰 ${statusLabel(rs)}</span>
           <span class="badge ${inv.tension ? 'tension-yes' : 'tension-no'}">${inv.tension ? '⚠️ Issue' : '✅ No Issue'}</span>
         </div>
-        <div class="row2"><span>Invoice Date</span><b>${fmtDate(inv.date)}</b></div>
         <div class="row2"><span>Serial No</span><b>${escapeHtml(inv.serialNo || '-')}</b></div>
+        <div class="row2"><span>Invoice Date</span><b>${fmtDate(inv.date)}</b></div>
         <div class="row2"><span>Supplier</span><b>${escapeHtml(inv.supplier || '-')}</b></div>
         <div class="row2"><span>Customer</span><b>${escapeHtml(inv.customer || '-')}</b></div>
         <div class="row2"><span>Package</span><b>${escapeHtml(truncate(inv.package, 40))}</b></div>
@@ -1070,8 +1070,8 @@ function renderReportBody() {
           <span class="badge ${rs}">💰 ${statusLabel(rs)}</span>
           <span class="badge ${i.tension ? 'tension-yes' : 'tension-no'}">${i.tension ? '⚠️ Issue' : '✅ OK'}</span>
         </div>
-        <div class="row2"><span>Invoice Date</span><b>${fmtDate(i.date)}</b></div>
         <div class="row2"><span>Serial No</span><b>${escapeHtml(i.serialNo || '-')}</b></div>
+        <div class="row2"><span>Invoice Date</span><b>${fmtDate(i.date)}</b></div>
         <div class="row2"><span>Supplier</span><b>${escapeHtml(i.supplier)}</b></div>
         <div class="row2"><span>Customer</span><b>${escapeHtml(i.customer)}</b></div>
         <div class="row2"><span>Total / Adv / Bal (USD)</span><b>${fmtUSD(i.totalUsd)} / ${fmtUSD(i.advanceUsd)} / ${fmtUSD(i.balanceUsd)}</b></div>
