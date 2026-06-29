@@ -415,7 +415,7 @@ function getFilteredInvoices() {
 
 function matchesSearch(inv, q) {
   if (inv.serialNo && String(inv.serialNo).toLowerCase() === q) return true;
-  return [inv.invNo, inv.supplier, inv.customer, inv.referredBy]
+  return [inv.invNo, inv.supplier, inv.customer, inv.referredBy, inv.package]
     .some(field => field && String(field).toLowerCase().includes(q));
 }
 
