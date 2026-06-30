@@ -804,6 +804,7 @@ function saveInvoice() {
   toast('⏳ Saving...');
 
   let docStep = Promise.resolve();
+  let docUploadError = null;
   if (pendingDocFile) {
     const docKey = currentCompanyId + '/' + invoiceId + '-' + Date.now() + '-' + pendingDocFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     docStep = uploadPendingDoc(docKey, pendingDocFile).then(() => {
@@ -811,7 +812,7 @@ function saveInvoice() {
       data.docName = pendingDocFile.name;
       if (existingDoc && existingDoc !== docKey) deleteDocByKey(existingDoc);
     }).catch(err => {
-      toast('⚠️ Document upload failed, saving invoice without it: ' + err.message);
+      docUploadError = err.message;
     });
   } else if (pendingDocRemoved && existingDoc) {
     data.docKey = '';
@@ -820,15 +821,18 @@ function saveInvoice() {
   }
 
   docStep.then(() => {
+    if (docUploadError) {
+      alert('Document upload failed:\n\n' + docUploadError + '\n\nThe invoice will still be saved, but without the document. Please try attaching it again by editing this invoice.');
+    }
     if (editingInvoiceId) {
       db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + editingInvoiceId).update(data).then(() => {
-        toast('✅ Invoice updated');
+        toast(docUploadError ? '✅ Invoice updated (document not attached)' : '✅ Invoice updated');
         closeInvoiceModal();
       }).catch(err => toast('Error: ' + err.message));
     } else {
       data.createdAt = Date.now();
       db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + invoiceId).set(data).then(() => {
-        toast('✅ Invoice saved');
+        toast(docUploadError ? '✅ Invoice saved (document not attached)' : '✅ Invoice saved');
         closeInvoiceModal();
       }).catch(err => toast('Error: ' + err.message));
     }
