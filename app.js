@@ -756,6 +756,7 @@ function renderBalanceHintText() {
   document.getElementById('balanceHint').textContent = parts.join('  ·  ');
 }
 function saveInvoice() {
+  alert('DEBUG: pendingDocFile is ' + (pendingDocFile ? ('SET (' + pendingDocFile.name + ', ' + pendingDocFile.size + ' bytes)') : 'NULL'));
   const invNo = document.getElementById('f_invno').value.trim();
   const supplier = document.getElementById('f_supplier').value.trim();
   const customer = document.getElementById('f_customer').value.trim();
