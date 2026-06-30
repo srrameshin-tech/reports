@@ -12,6 +12,8 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 const ROOT = "importReports";
+const DOC_WORKER_URL = "https://reports-invoices-worker.srrameshin.workers.dev";
+const DOC_AUTH_SECRET = "reports-secret-2026";
 
 /* ====================== STATE ====================== */
 let currentUser = null;       // {id, name}
@@ -25,6 +27,8 @@ let currentCompanyName = '';
 let invoicesCache = {};       // {invId: {...}}
 let editingInvoiceId = null;
 let editingCompanyId = null;
+let pendingDocFile = null;     // File object selected but not yet uploaded
+let pendingDocRemoved = false; // true if user removed an existing doc on this edit
 let listFilter = "all";
 let currentReportType = null;
 
@@ -451,6 +455,7 @@ function renderInvoiceList() {
         <div class="row2"><span>Customer</span><b>${escapeHtml(inv.customer || '-')}</b></div>
         <div class="row2"><span>Package</span><b>${escapeHtml(truncate(inv.package, 40))}</b></div>
         <div class="row2"><span>Referred By</span><b>${escapeHtml(inv.referredBy || '-')}</b></div>
+        ${inv.docKey ? `<div class="row2"><span>Document</span><b><a href="#" onclick="viewDocumentForInvoice('${id}');return false;" style="color:var(--cargo);text-decoration:underline;">📄 View Document</a></b></div>` : ''}
         ${(inv.totalUsd || inv.totalInr) ? `<div class="row2"><span>Total</span><b>${inv.totalUsd ? fmtUSD(inv.totalUsd) : ''}${inv.totalUsd && inv.totalInr ? ' / ' : ''}${inv.totalInr ? fmtMoney(inv.totalInr) : ''}</b></div>` : ''}
         ${(inv.advanceUsd || inv.balanceUsd || inv.advanceInr || inv.balanceInr) ? `<div class="row2"><span>Advance / Balance</span><b>${fmtUSD(inv.advanceUsd)} / ${fmtUSD(inv.balanceUsd)}${(inv.advanceInr || inv.balanceInr) ? '  ·  ' + fmtMoney(inv.advanceInr) + ' / ' + fmtMoney(inv.balanceInr) : ''}</b></div>` : ''}
         ${inv.exRate ? `<div class="row2"><span>Exchange Rate</span><b>1 USD = ${fmtMoney(inv.exRate)}</b></div>` : ''}
@@ -474,12 +479,102 @@ function truncate(s, n) {
 }
 
 /* ====================== ADD/EDIT INVOICE MODAL ====================== */
+/* ====================== DOCUMENT ATTACH (R2 via Worker) ====================== */
+function docAuthHeader() {
+  return { "Authorization": "Bearer " + DOC_AUTH_SECRET };
+}
+
+function onDocFileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) {
+    toast('⚠️ File too large. Please pick a photo under 8MB.');
+    event.target.value = '';
+    return;
+  }
+  pendingDocFile = file;
+  pendingDocRemoved = false;
+  document.getElementById('docPreviewName').textContent = file.name;
+  document.getElementById('docPreviewWrap').classList.remove('hidden');
+  document.getElementById('docUploadWrap').classList.add('hidden');
+  document.getElementById('docUploadStatus').textContent = 'Not uploaded yet — will upload when you save this invoice.';
+}
+
+function removeInvoiceDocument() {
+  pendingDocFile = null;
+  pendingDocRemoved = true;
+  document.getElementById('f_docFile').value = '';
+  document.getElementById('docPreviewWrap').classList.add('hidden');
+  document.getElementById('docUploadWrap').classList.remove('hidden');
+}
+
+function viewInvoiceDocument() {
+  if (pendingDocFile) {
+    const url = URL.createObjectURL(pendingDocFile);
+    window.open(url, '_blank');
+    return;
+  }
+  if (editingInvoiceId && invoicesCache[editingInvoiceId] && invoicesCache[editingInvoiceId].docKey) {
+    openDocByKey(invoicesCache[editingInvoiceId].docKey);
+  }
+}
+
+function viewDocumentForInvoice(id) {
+  const inv = invoicesCache[id];
+  if (inv && inv.docKey) openDocByKey(inv.docKey);
+}
+
+function openDocByKey(key) {
+  toast('📄 Loading document...');
+  fetch(DOC_WORKER_URL + '/file/' + encodeURIComponent(key), { headers: docAuthHeader() })
+    .then(resp => {
+      if (!resp.ok) throw new Error('Document not found (status ' + resp.status + ')');
+      return resp.blob();
+    })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    })
+    .catch(err => toast('⚠️ Could not load document: ' + err.message));
+}
+
+function uploadPendingDoc(docKey, file) {
+  return fetch(DOC_WORKER_URL + '/upload/' + encodeURIComponent(docKey), {
+    method: 'PUT',
+    headers: { ...docAuthHeader(), 'Content-Type': file.type || 'application/octet-stream' },
+    body: file,
+  }).then(resp => {
+    if (!resp.ok) throw new Error('Upload failed (status ' + resp.status + ')');
+    return resp.json();
+  });
+}
+
+function deleteDocByKey(key) {
+  return fetch(DOC_WORKER_URL + '/file/' + encodeURIComponent(key), {
+    method: 'DELETE',
+    headers: docAuthHeader(),
+  }).catch(() => {}); // best-effort; don't block save flow on cleanup failure
+}
+
+
 function openInvoiceModal(id) {
   editingInvoiceId = id || null;
+  pendingDocFile = null;
+  pendingDocRemoved = false;
+  document.getElementById('f_docFile').value = '';
+  document.getElementById('docUploadStatus').textContent = '';
   document.getElementById('modalTitle').textContent = id ? 'Invoice Edit' : 'New Invoice';
   unlockAllFields();
   if (id && invoicesCache[id]) {
     const inv = invoicesCache[id];
+    if (inv.docKey) {
+      document.getElementById('docPreviewName').textContent = inv.docName || 'Attached document';
+      document.getElementById('docPreviewWrap').classList.remove('hidden');
+      document.getElementById('docUploadWrap').classList.add('hidden');
+    } else {
+      document.getElementById('docPreviewWrap').classList.add('hidden');
+      document.getElementById('docUploadWrap').classList.remove('hidden');
+    }
     document.getElementById('f_serialNo').value = inv.serialNo || getNextSerialNo();
     document.getElementById('f_invno').value = inv.invNo || '';
     document.getElementById('f_date').value = inv.date || '';
@@ -502,6 +597,8 @@ function openInvoiceModal(id) {
     document.getElementById('f_tension').checked = !!inv.tension;
     document.getElementById('f_notes').value = inv.notes || '';
   } else {
+    document.getElementById('docPreviewWrap').classList.add('hidden');
+    document.getElementById('docUploadWrap').classList.remove('hidden');
     document.getElementById('f_serialNo').value = getNextSerialNo();
     document.getElementById('f_invno').value = '';
     document.getElementById('f_date').value = todayISO();
@@ -700,27 +797,50 @@ function saveInvoice() {
   data.total = data.totalUsd;
   data.advance = data.advanceUsd;
   data.balance = data.balanceUsd;
-  const ref = editingInvoiceId
-    ? db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + editingInvoiceId)
-    : db.ref(ROOT + '/invoices/' + currentCompanyId).push();
-  if (!editingInvoiceId) data.createdAt = Date.now();
-  if (editingInvoiceId) {
-    db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + editingInvoiceId).update(data).then(() => {
-      toast('✅ Invoice updated');
-      closeInvoiceModal();
-    }).catch(err => toast('Error: ' + err.message));
-  } else {
-    db.ref(ROOT + '/invoices/' + currentCompanyId).push(data).then(() => {
-      toast('✅ Invoice saved');
-      closeInvoiceModal();
-    }).catch(err => toast('Error: ' + err.message));
+
+  const existingDoc = editingInvoiceId && invoicesCache[editingInvoiceId] ? invoicesCache[editingInvoiceId].docKey : null;
+  const invoiceId = editingInvoiceId || db.ref(ROOT + '/invoices/' + currentCompanyId).push().key;
+
+  toast('⏳ Saving...');
+
+  let docStep = Promise.resolve();
+  if (pendingDocFile) {
+    const docKey = currentCompanyId + '/' + invoiceId + '-' + Date.now() + '-' + pendingDocFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    docStep = uploadPendingDoc(docKey, pendingDocFile).then(() => {
+      data.docKey = docKey;
+      data.docName = pendingDocFile.name;
+      if (existingDoc && existingDoc !== docKey) deleteDocByKey(existingDoc);
+    }).catch(err => {
+      toast('⚠️ Document upload failed, saving invoice without it: ' + err.message);
+    });
+  } else if (pendingDocRemoved && existingDoc) {
+    data.docKey = '';
+    data.docName = '';
+    docStep = deleteDocByKey(existingDoc);
   }
+
+  docStep.then(() => {
+    if (editingInvoiceId) {
+      db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + editingInvoiceId).update(data).then(() => {
+        toast('✅ Invoice updated');
+        closeInvoiceModal();
+      }).catch(err => toast('Error: ' + err.message));
+    } else {
+      data.createdAt = Date.now();
+      db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + invoiceId).set(data).then(() => {
+        toast('✅ Invoice saved');
+        closeInvoiceModal();
+      }).catch(err => toast('Error: ' + err.message));
+    }
+  });
 }
 function deleteInvoice(id) {
   if (!confirm('Delete this invoice? This is permanent.')) return;
   const deletedInv = invoicesCache[id];
   const deletedSerial = Number(deletedInv && deletedInv.serialNo) || 0;
+  const docKey = deletedInv && deletedInv.docKey;
   db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + id).remove().then(() => {
+    if (docKey) deleteDocByKey(docKey);
     if (deletedSerial > 0) {
       renumberSerialsAfterDelete(deletedSerial);
     }
