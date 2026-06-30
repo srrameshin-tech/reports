@@ -342,6 +342,24 @@
       <label>Package Details *</label>
       <textarea id="f_package" placeholder="Item description, qty, packages etc."></textarea>
     </div>
+
+    <div class="field">
+      <label>📷 Invoice Document (optional)</label>
+      <input type="file" id="f_docFile" accept="image/*" capture="environment" class="hidden" onchange="onDocFileSelected(event)">
+      <div id="docUploadWrap">
+        <button type="button" class="btn-secondary" style="margin-top:0;" onclick="document.getElementById('f_docFile').click()">📷 Attach Photo / Document</button>
+      </div>
+      <div id="docPreviewWrap" class="hidden" style="margin-top:8px;">
+        <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;">
+          <span style="font-size:22px;">📄</span>
+          <span id="docPreviewName" style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+          <button type="button" onclick="viewInvoiceDocument()" style="border:1px solid var(--cargo);background:var(--cargo-light);color:var(--cargo);border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;">View</button>
+          <button type="button" onclick="removeInvoiceDocument()" style="border:1px solid #f0c4bd;background:#fff;color:var(--stamp-red);border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;">Remove</button>
+        </div>
+        <div id="docUploadStatus" style="font-size:11px;color:#6b6557;margin-top:5px;"></div>
+      </div>
+    </div>
+
     <div class="field" style="position:relative;">
       <label>Order Referred By *</label>
       <input type="text" id="f_referredBy" placeholder="Name of the person who referred this order" autocomplete="off" oninput="showSuggestions('referredBy')" onfocus="showSuggestions('referredBy')" onblur="setTimeout(()=>hideSuggestions('referredBy'),150)">
