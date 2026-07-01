@@ -27,8 +27,9 @@ let currentCompanyName = '';
 let invoicesCache = {};       // {invId: {...}}
 let editingInvoiceId = null;
 let editingCompanyId = null;
-let pendingDocFile = null;     // File object selected but not yet uploaded
-let pendingDocRemoved = false; // true if user removed an existing doc on this edit
+let currentInvoiceDocs = [];   // [{key, name}] docs already saved & attached to the invoice being edited
+let pendingDocFiles = [];      // [File] newly selected files not yet uploaded (max 3 total with currentInvoiceDocs)
+let removedDocKeys = [];       // keys of previously saved docs the user removed during this edit session
 let listFilter = "all";
 let currentReportType = null;
 
@@ -455,7 +456,7 @@ function renderInvoiceList() {
         <div class="row2"><span>Customer</span><b>${escapeHtml(inv.customer || '-')}</b></div>
         <div class="row2"><span>Package</span><b>${escapeHtml(truncate(inv.package, 40))}</b></div>
         <div class="row2"><span>Referred By</span><b>${escapeHtml(inv.referredBy || '-')}</b></div>
-        ${inv.docKey ? `<div class="row2"><span>Document</span><b><a href="#" onclick="viewDocumentForInvoice('${id}');return false;" style="color:var(--cargo);text-decoration:underline;">📄 View Document</a></b></div>` : ''}
+        ${renderCardDocsRow(id, inv)}
         ${(inv.totalUsd || inv.totalInr) ? `<div class="row2"><span>Total</span><b>${inv.totalUsd ? fmtUSD(inv.totalUsd) : ''}${inv.totalUsd && inv.totalInr ? ' / ' : ''}${inv.totalInr ? fmtMoney(inv.totalInr) : ''}</b></div>` : ''}
         ${(inv.advanceUsd || inv.balanceUsd || inv.advanceInr || inv.balanceInr) ? `<div class="row2"><span>Advance / Balance</span><b>${fmtUSD(inv.advanceUsd)} / ${fmtUSD(inv.balanceUsd)}${(inv.advanceInr || inv.balanceInr) ? '  ·  ' + fmtMoney(inv.advanceInr) + ' / ' + fmtMoney(inv.balanceInr) : ''}</b></div>` : ''}
         ${inv.exRate ? `<div class="row2"><span>Exchange Rate</span><b>1 USD = ${fmtMoney(inv.exRate)}</b></div>` : ''}
@@ -485,43 +486,108 @@ function docAuthHeader() {
 }
 
 function onDocFileSelected(event) {
-  const file = event.target.files[0];
+  const files = Array.from(event.target.files || []);
+  event.target.value = '';
+  if (!files.length) return;
+  const availableSlots = 3 - (currentInvoiceDocs.length + pendingDocFiles.length);
+  if (availableSlots <= 0) {
+    toast('⚠️ Maximum 3 documents allowed per invoice.');
+    return;
+  }
+  let added = 0;
+  for (const file of files) {
+    if (added >= availableSlots) {
+      toast('⚠️ Only ' + availableSlots + ' more document(s) can be added (max 3 per invoice).');
+      break;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast('⚠️ "' + file.name + '" is too large. Please pick a file under 8MB.');
+      continue;
+    }
+    pendingDocFiles.push(file);
+    added++;
+  }
+  renderDocsList();
+}
+
+function removeExistingDoc(index) {
+  const doc = currentInvoiceDocs[index];
+  if (!doc) return;
+  removedDocKeys.push(doc.key);
+  currentInvoiceDocs.splice(index, 1);
+  renderDocsList();
+}
+
+function removePendingFile(index) {
+  pendingDocFiles.splice(index, 1);
+  renderDocsList();
+}
+
+function viewPendingFile(index) {
+  const file = pendingDocFiles[index];
   if (!file) return;
-  if (file.size > 8 * 1024 * 1024) {
-    toast('⚠️ File too large. Please pick a photo under 8MB.');
-    event.target.value = '';
-    return;
-  }
-  pendingDocFile = file;
-  pendingDocRemoved = false;
-  document.getElementById('docPreviewName').textContent = file.name;
-  document.getElementById('docPreviewWrap').classList.remove('hidden');
-  document.getElementById('docUploadWrap').classList.add('hidden');
-  document.getElementById('docUploadStatus').textContent = 'Not uploaded yet — will upload when you save this invoice.';
+  const url = URL.createObjectURL(file);
+  window.open(url, '_blank');
 }
 
-function removeInvoiceDocument() {
-  pendingDocFile = null;
-  pendingDocRemoved = true;
-  document.getElementById('f_docFile').value = '';
-  document.getElementById('docPreviewWrap').classList.add('hidden');
-  document.getElementById('docUploadWrap').classList.remove('hidden');
+function getInvoiceDocs(inv) {
+  if (Array.isArray(inv.docs) && inv.docs.length) {
+    return inv.docs.map(d => ({ key: d.key, name: d.name || 'Document' }));
+  }
+  if (inv.docKey) {
+    return [{ key: inv.docKey, name: inv.docName || 'Attached document' }];
+  }
+  return [];
 }
 
-function viewInvoiceDocument() {
-  if (pendingDocFile) {
-    const url = URL.createObjectURL(pendingDocFile);
-    window.open(url, '_blank');
-    return;
-  }
-  if (editingInvoiceId && invoicesCache[editingInvoiceId] && invoicesCache[editingInvoiceId].docKey) {
-    openDocByKey(invoicesCache[editingInvoiceId].docKey);
+function renderCardDocsRow(id, inv) {
+  const docs = getInvoiceDocs(inv);
+  if (!docs.length) return '';
+  const links = docs.map((doc, i) =>
+    `<a href="#" onclick="viewDocumentForInvoice('${id}','${doc.key}');return false;" style="color:var(--cargo);text-decoration:underline;">📄 ${docs.length > 1 ? 'Doc ' + (i + 1) : 'View Document'}</a>`
+  ).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+  return `<div class="row2"><span>Document${docs.length > 1 ? 's' : ''}</span><b>${links}</b></div>`;
+}
+
+function renderDocsList() {
+  const wrap = document.getElementById('docListWrap');
+  if (!wrap) return;
+  const rows = [];
+  currentInvoiceDocs.forEach((doc, i) => {
+    rows.push(`
+      <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:6px;">
+        <span style="font-size:22px;">📄</span>
+        <span style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(doc.name)}</span>
+        <button type="button" onclick="openDocByKey('${doc.key}')" style="border:1px solid var(--cargo);background:var(--cargo-light);color:var(--cargo);border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;">View</button>
+        <button type="button" onclick="removeExistingDoc(${i})" style="border:1px solid #f0c4bd;background:#fff;color:var(--stamp-red);border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;">Remove</button>
+      </div>`);
+  });
+  pendingDocFiles.forEach((file, i) => {
+    rows.push(`
+      <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px dashed var(--cargo);border-radius:9px;padding:10px 12px;margin-bottom:6px;">
+        <span style="font-size:22px;">📄</span>
+        <span style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(file.name)} <i style="color:#a08a5c;font-weight:400;">(not uploaded yet)</i></span>
+        <button type="button" onclick="viewPendingFile(${i})" style="border:1px solid var(--cargo);background:var(--cargo-light);color:var(--cargo);border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;">View</button>
+        <button type="button" onclick="removePendingFile(${i})" style="border:1px solid #f0c4bd;background:#fff;color:var(--stamp-red);border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;">Remove</button>
+      </div>`);
+  });
+  wrap.innerHTML = rows.join('');
+  const total = currentInvoiceDocs.length + pendingDocFiles.length;
+  const uploadWrap = document.getElementById('docUploadWrap');
+  if (uploadWrap) uploadWrap.style.display = total >= 3 ? 'none' : '';
+  const statusEl = document.getElementById('docUploadStatus');
+  if (statusEl) {
+    statusEl.textContent = total >= 3
+      ? '📌 Maximum 3 documents attached.'
+      : (pendingDocFiles.length ? 'Not uploaded yet — will upload when you save this invoice.' : '');
   }
 }
 
-function viewDocumentForInvoice(id) {
+function viewDocumentForInvoice(id, key) {
+  if (key) { openDocByKey(key); return; }
   const inv = invoicesCache[id];
-  if (inv && inv.docKey) openDocByKey(inv.docKey);
+  const docs = inv ? getInvoiceDocs(inv) : [];
+  if (docs[0]) openDocByKey(docs[0].key);
 }
 
 function openDocByKey(key) {
@@ -559,22 +625,16 @@ function deleteDocByKey(key) {
 
 function openInvoiceModal(id) {
   editingInvoiceId = id || null;
-  pendingDocFile = null;
-  pendingDocRemoved = false;
+  pendingDocFiles = [];
+  removedDocKeys = [];
   document.getElementById('f_docFile').value = '';
   document.getElementById('docUploadStatus').textContent = '';
   document.getElementById('modalTitle').textContent = id ? 'Invoice Edit' : 'New Invoice';
   unlockAllFields();
   if (id && invoicesCache[id]) {
     const inv = invoicesCache[id];
-    if (inv.docKey) {
-      document.getElementById('docPreviewName').textContent = inv.docName || 'Attached document';
-      document.getElementById('docPreviewWrap').classList.remove('hidden');
-      document.getElementById('docUploadWrap').classList.add('hidden');
-    } else {
-      document.getElementById('docPreviewWrap').classList.add('hidden');
-      document.getElementById('docUploadWrap').classList.remove('hidden');
-    }
+    currentInvoiceDocs = getInvoiceDocs(inv);
+    renderDocsList();
     document.getElementById('f_serialNo').value = inv.serialNo || getNextSerialNo();
     document.getElementById('f_invno').value = inv.invNo || '';
     document.getElementById('f_date').value = inv.date || '';
@@ -597,8 +657,8 @@ function openInvoiceModal(id) {
     document.getElementById('f_tension').checked = !!inv.tension;
     document.getElementById('f_notes').value = inv.notes || '';
   } else {
-    document.getElementById('docPreviewWrap').classList.add('hidden');
-    document.getElementById('docUploadWrap').classList.remove('hidden');
+    currentInvoiceDocs = [];
+    renderDocsList();
     document.getElementById('f_serialNo').value = getNextSerialNo();
     document.getElementById('f_invno').value = '';
     document.getElementById('f_date').value = todayISO();
@@ -756,7 +816,6 @@ function renderBalanceHintText() {
   document.getElementById('balanceHint').textContent = parts.join('  ·  ');
 }
 function saveInvoice() {
-  alert('DEBUG: pendingDocFile is ' + (pendingDocFile ? ('SET (' + pendingDocFile.name + ', ' + pendingDocFile.size + ' bytes)') : 'NULL'));
   const invNo = document.getElementById('f_invno').value.trim();
   const supplier = document.getElementById('f_supplier').value.trim();
   const customer = document.getElementById('f_customer').value.trim();
@@ -799,41 +858,43 @@ function saveInvoice() {
   data.advance = data.advanceUsd;
   data.balance = data.balanceUsd;
 
-  const existingDoc = editingInvoiceId && invoicesCache[editingInvoiceId] ? invoicesCache[editingInvoiceId].docKey : null;
   const invoiceId = editingInvoiceId || db.ref(ROOT + '/invoices/' + currentCompanyId).push().key;
 
   toast('⏳ Saving...');
 
-  let docStep = Promise.resolve();
-  let docUploadError = null;
-  if (pendingDocFile) {
-    const docKey = currentCompanyId + '/' + invoiceId + '-' + Date.now() + '-' + pendingDocFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    docStep = uploadPendingDoc(docKey, pendingDocFile).then(() => {
-      data.docKey = docKey;
-      data.docName = pendingDocFile.name;
-      if (existingDoc && existingDoc !== docKey) deleteDocByKey(existingDoc);
-    }).catch(err => {
-      docUploadError = err.message;
-    });
-  } else if (pendingDocRemoved && existingDoc) {
-    data.docKey = '';
-    data.docName = '';
-    docStep = deleteDocByKey(existingDoc);
-  }
+  const filesToUpload = pendingDocFiles.slice(0, 3 - currentInvoiceDocs.length);
+  const uploadErrors = [];
 
-  docStep.then(() => {
-    if (docUploadError) {
-      alert('Document upload failed:\n\n' + docUploadError + '\n\nThe invoice will still be saved, but without the document. Please try attaching it again by editing this invoice.');
+  const uploadStep = Promise.all(filesToUpload.map((file, i) => {
+    const docKey = currentCompanyId + '/' + invoiceId + '-' + Date.now() + '-' + i + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    return uploadPendingDoc(docKey, file).then(() => {
+      currentInvoiceDocs.push({ key: docKey, name: file.name });
+    }).catch(err => {
+      uploadErrors.push(file.name + ': ' + err.message);
+    });
+  }));
+
+  uploadStep.then(() => {
+    // Clean up any docs the user explicitly removed during this edit (best-effort).
+    removedDocKeys.forEach(key => deleteDocByKey(key));
+
+    data.docs = currentInvoiceDocs;
+    // Clear legacy single-doc fields now that we store docs as an array.
+    data.docKey = null;
+    data.docName = null;
+
+    if (uploadErrors.length) {
+      alert('Some documents failed to upload:\n\n' + uploadErrors.join('\n') + '\n\nThe invoice will still be saved with the documents that did upload successfully. Please try attaching the failed one again by editing this invoice.');
     }
     if (editingInvoiceId) {
       db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + editingInvoiceId).update(data).then(() => {
-        toast(docUploadError ? '✅ Invoice updated (document not attached)' : '✅ Invoice updated');
+        toast(uploadErrors.length ? '✅ Invoice updated (some documents not attached)' : '✅ Invoice updated');
         closeInvoiceModal();
       }).catch(err => toast('Error: ' + err.message));
     } else {
       data.createdAt = Date.now();
       db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + invoiceId).set(data).then(() => {
-        toast(docUploadError ? '✅ Invoice saved (document not attached)' : '✅ Invoice saved');
+        toast(uploadErrors.length ? '✅ Invoice saved (some documents not attached)' : '✅ Invoice saved');
         closeInvoiceModal();
       }).catch(err => toast('Error: ' + err.message));
     }
@@ -843,9 +904,9 @@ function deleteInvoice(id) {
   if (!confirm('Delete this invoice? This is permanent.')) return;
   const deletedInv = invoicesCache[id];
   const deletedSerial = Number(deletedInv && deletedInv.serialNo) || 0;
-  const docKey = deletedInv && deletedInv.docKey;
+  const docsToDelete = deletedInv ? getInvoiceDocs(deletedInv) : [];
   db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + id).remove().then(() => {
-    if (docKey) deleteDocByKey(docKey);
+    docsToDelete.forEach(doc => deleteDocByKey(doc.key));
     if (deletedSerial > 0) {
       renumberSerialsAfterDelete(deletedSerial);
     }
