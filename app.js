@@ -632,6 +632,8 @@ function openInvoiceModal(id) {
   removedDocKeys = [];
   document.getElementById('f_docFile').value = '';
   document.getElementById('docUploadStatus').textContent = '';
+  document.getElementById('invNoDupWarning').classList.add('hidden');
+  document.getElementById('packageDupWarning').classList.add('hidden');
   document.getElementById('modalTitle').textContent = id ? 'Invoice Edit' : 'New Invoice';
   unlockAllFields();
   if (id && invoicesCache[id]) {
@@ -818,6 +820,39 @@ function renderBalanceHintText() {
   }
   document.getElementById('balanceHint').textContent = parts.join('  ·  ');
 }
+function findDuplicates(field, value) {
+  const v = (value || '').trim().toLowerCase();
+  if (!v) return [];
+  return Object.entries(invoicesCache).filter(([id, inv]) => {
+    if (editingInvoiceId && id === editingInvoiceId) return false;
+    return (inv[field] || '').trim().toLowerCase() === v;
+  });
+}
+function checkInvNoDuplicate() {
+  const value = document.getElementById('f_invno').value;
+  const dups = findDuplicates('invNo', value);
+  const warnEl = document.getElementById('invNoDupWarning');
+  if (dups.length > 0) {
+    const names = dups.map(([id, inv]) => inv.invNo).join(', ');
+    warnEl.textContent = `⚠️ Invoice No "${dups[0][1].invNo}" already exists (${dups.length} match${dups.length > 1 ? 'es' : ''}). Please check before saving.`;
+    warnEl.classList.remove('hidden');
+  } else {
+    warnEl.classList.add('hidden');
+    warnEl.textContent = '';
+  }
+}
+function checkPackageDuplicate() {
+  const value = document.getElementById('f_package').value;
+  const dups = findDuplicates('package', value);
+  const warnEl = document.getElementById('packageDupWarning');
+  if (dups.length > 0) {
+    warnEl.textContent = `⚠️ This Package Details text matches an existing invoice (${dups.map(([id, inv]) => inv.invNo || '-').join(', ')}). Please check before saving.`;
+    warnEl.classList.remove('hidden');
+  } else {
+    warnEl.classList.add('hidden');
+    warnEl.textContent = '';
+  }
+}
 function saveInvoice() {
   const invNo = document.getElementById('f_invno').value.trim();
   const supplier = document.getElementById('f_supplier').value.trim();
@@ -833,6 +868,15 @@ function saveInvoice() {
   if (remitType === '3rdparty' && !remitThirdParty) {
     toast('⚠️ Please enter 3rd Party Name');
     return;
+  }
+  const invNoDups = findDuplicates('invNo', invNo);
+  const pkgDups = findDuplicates('package', pkg);
+  if (invNoDups.length > 0 || pkgDups.length > 0) {
+    const msgs = [];
+    if (invNoDups.length > 0) msgs.push(`Invoice No "${invNo}" already exists (${invNoDups.length} match${invNoDups.length > 1 ? 'es' : ''}).`);
+    if (pkgDups.length > 0) msgs.push(`This Package Details already exists in another invoice (${pkgDups.map(([id, inv]) => inv.invNo || '-').join(', ')}).`);
+    const proceed = confirm('⚠️ Possible duplicate entry:\n\n' + msgs.join('\n') + '\n\nDo you want to save anyway?');
+    if (!proceed) return;
   }
   const data = {
     invNo, supplier, customer, package: pkg, referredBy,
