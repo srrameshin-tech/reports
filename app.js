@@ -569,7 +569,7 @@ function renderDocsList() {
     rows.push(`
       <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px dashed var(--cargo);border-radius:9px;padding:10px 12px;margin-bottom:6px;">
         <span style="font-size:22px;">📄</span>
-        <span style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(file.name)} <i style="color:#a08a5c;font-weight:400;">(not uploaded yet)</i></span>
+        <span style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(file.name)} <i style="color:var(--slate-light);font-weight:400;">(not uploaded yet)</i></span>
         <button type="button" onclick="viewPendingFile(${i})" style="border:1px solid var(--cargo);background:var(--cargo-light);color:var(--cargo);border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;">View</button>
         <button type="button" onclick="removePendingFile(${i})" style="border:1px solid #f0c4bd;background:#fff;color:var(--stamp-red);border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;">Remove</button>
       </div>`);
