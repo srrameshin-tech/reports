@@ -1,0 +1,38 @@
+name: Weekly Reports Backup
+
+on:
+  schedule:
+    - cron: '30 20 * * 6'   # 2:00 AM IST every Sunday
+  workflow_dispatch:         # allows manual "Run workflow" trigger too
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch Firebase data and save backup
+        env:
+          BACKUP_EMAIL: ${{ secrets.BACKUP_EMAIL }}
+          BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+        run: python backup_script.py
+
+      - name: Commit backup file
+        run: |
+          git config user.name "reports-backup-bot"
+          git config user.email "actions@github.com"
+          git add backups/
+          git diff --staged --quiet || git commit -m "Weekly backup $(date +'%Y-%m-%d')"
+          git push
