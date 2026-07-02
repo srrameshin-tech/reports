@@ -157,7 +157,7 @@ function renderUserList() {
     card.className = 'user-card';
     card.style.width = '100%';
     card.style.border = 'none';
-    card.innerHTML = `<span class="av">${initials(u.name)}</span><span>${u.name}</span>`;
+    card.innerHTML = `<span class="av">${initials(u.name)}</span><span style="flex:1;text-align:left;">${u.name}</span><span class="company-card-arrow">\u203a</span>`;
     card.onclick = () => {
       pendingLoginUser = { id: uid, name: u.name, pin: u.pin };
       enteredPin = '';
@@ -273,8 +273,13 @@ function renderCompanySelectList() {
     const count = companyInvoiceCounts[cid] || 0;
     const card = document.createElement('button');
     card.className = 'company-card';
-    card.innerHTML = `<span class="av">${initials(c.name)}</span><span style="flex:1;text-align:left;">${escapeHtml(c.name)}</span><span class="company-pill">${count} invoice${count === 1 ? '' : 's'}</span>`;
-    card.style.justifyContent = 'space-between';
+    card.innerHTML = `
+      <span class="av">${initials(c.name)}</span>
+      <span class="company-card-body">
+        <span class="company-card-name">${escapeHtml(c.name)}</span>
+        <span class="company-card-count">${count} invoice${count === 1 ? '' : 's'}</span>
+      </span>
+      <span class="company-card-arrow">›</span>`;
     card.onclick = () => enterCompany(cid, c.name);
     wrap.appendChild(card);
   });
