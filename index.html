@@ -14,12 +14,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink:#17211d; --paper:#f7f5ef; --paper-deep:#eee8d8;
+    --ink:#17211d; --paper:#f2f5f3; --paper-deep:#e4ebe7;
     --cargo:#0b4a44; --cargo-deep:#072e2a; --cargo-light:#dfece9;
     --stamp-red:#9c2f24; --stamp-red-bg:#fbe8e5;
     --customs-gold:#7a4f10; --customs-gold-bg:#f7ecd6;
     --ok-green:#276148; --ok-green-bg:#e3f0e8;
-    --line:#ddd6c2; --slate:#5c5648; --slate-light:#7d7660;
+    --line:#d7ddd8; --slate:#565f5a; --slate-light:#6c756e;
     --shadow-sm:0 1px 2px rgba(23,33,29,.06), 0 1px 1px rgba(23,33,29,.04);
     --shadow-md:0 4px 12px rgba(23,33,29,.09), 0 1px 3px rgba(23,33,29,.06);
     --shadow-lg:0 12px 32px rgba(23,33,29,.16), 0 2px 8px rgba(23,33,29,.08);
@@ -49,9 +49,9 @@
   .pin-key:active { background:var(--customs-gold); border-color:var(--customs-gold); }
   .pin-key.empty { background:transparent; border:none; }
   #loginErr { color:#ffcfc7; font-size:13px; text-align:center; margin-top:10px; height:16px; font-weight:600; }
-  .user-card { background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; color:#fff; font-size:15px; font-weight:600; transition:.15s; }
+  .user-card { background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); border-radius:16px; padding:15px 16px; display:flex; align-items:center; gap:13px; color:#fff; font-size:15px; font-weight:600; transition:.15s; font-family:'Space Grotesk',sans-serif; }
   .user-card:active { background:rgba(255,255,255,.17); }
-  .user-card .av { font-family:'Space Grotesk',sans-serif; width:38px; height:38px; border-radius:9px; background:var(--customs-gold); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+  .user-card .av { font-family:'Space Grotesk',sans-serif; width:44px; height:44px; border-radius:50%; background:linear-gradient(145deg,#c98f1e,var(--customs-gold)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; font-size:15px; box-shadow:0 0 0 3px rgba(255,255,255,.14), 0 3px 8px rgba(0,0,0,.25); }
 
   /* ---------- COMPANY SELECT ---------- */
   #companyScreen { min-height:100vh; background:
@@ -59,9 +59,13 @@
       radial-gradient(120% 140% at 15% -10%, rgba(255,255,255,.08), transparent 55%),
       linear-gradient(165deg,var(--cargo),var(--cargo-deep)); color:#fff; padding:24px; }
   .company-select-wrap { min-height:calc(100vh - 48px); display:flex; flex-direction:column; align-items:center; justify-content:center; }
-  .company-card { background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; color:#fff; font-size:15px; font-weight:700; width:100%; transition:.15s; font-family:'Space Grotesk',sans-serif; }
-  .company-card:active { background:rgba(255,255,255,.17); }
-  .company-card .av { font-family:'IBM Plex Mono',monospace; width:38px; height:38px; border-radius:9px; background:#8a5e0f; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; flex-shrink:0; font-size:14px; }
+  .company-card { background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); border-radius:16px; padding:15px 16px; display:flex; align-items:center; gap:13px; color:#fff; width:100%; transition:.15s; }
+  .company-card:active { background:rgba(255,255,255,.17); border-color:rgba(255,255,255,.3); }
+  .company-card .av { font-family:'IBM Plex Mono',monospace; width:44px; height:44px; border-radius:50%; background:linear-gradient(145deg,#c98f1e,#8a5e0f); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; flex-shrink:0; font-size:14px; box-shadow:0 0 0 3px rgba(255,255,255,.14), 0 3px 8px rgba(0,0,0,.25); }
+  .company-card-body { flex:1; display:flex; flex-direction:column; gap:3px; text-align:left; min-width:0; }
+  .company-card-name { font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .company-card-count { font-size:11.5px; font-weight:600; color:rgba(255,255,255,.65); }
+  .company-card-arrow { font-size:22px; font-weight:400; color:rgba(255,255,255,.45); flex-shrink:0; }
   .company-pill { background:#8a5e0f; border:1.5px solid #5c3d09; color:#fff; padding:7px 14px; border-radius:8px; font-size:13.5px; font-weight:800; display:inline-flex; align-items:center; gap:6px; }
 
   /* ---------- COMPANY MANAGEMENT (settings) ---------- */
@@ -82,17 +86,17 @@
   .sum-card .l { font-size:10px; opacity:.85; font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
 
   /* ---------- TABS ---------- */
-  .tabbar { display:flex; background:var(--paper); position:sticky; top:0; z-index:40; border-bottom:1px solid var(--line); overflow-x:auto; }
-  .tabbar button { flex:1; min-width:78px; padding:14px 6px; font-size:15px; background:none; border:none; color:var(--slate); border-bottom:3px solid transparent; white-space:nowrap; font-weight:700; }
-  .tabbar button.active { color:var(--cargo); border-color:var(--customs-gold); }
+  .tabbar { display:flex; gap:4px; background:var(--paper); position:sticky; top:0; z-index:40; border-bottom:1px solid var(--line); overflow-x:auto; padding:8px 10px; }
+  .tabbar button { flex:1; min-width:78px; padding:10px 6px; font-size:14px; background:none; border:1.5px solid transparent; border-radius:9px; color:var(--slate); white-space:nowrap; font-weight:700; }
+  .tabbar button.active { color:#fff; background:var(--cargo); border-color:var(--cargo); box-shadow:0 3px 10px rgba(11,74,68,.3); }
 
   /* ---------- CONTENT ---------- */
   .content { padding:14px; }
   .fab { position:fixed; bottom:22px; right:18px; background:var(--cargo); color:#fff; width:56px; height:56px; border-radius:16px; border:none; font-size:28px; box-shadow:0 8px 20px rgba(11,74,68,.4); z-index:60; }
   .fab:active { box-shadow:0 4px 10px rgba(11,74,68,.35); }
 
-  .card { position:relative; background:#fff; border-radius:12px; padding:14px 14px 14px 18px; margin-bottom:12px; box-shadow:var(--shadow-sm); border:1px solid var(--line); transition:box-shadow .15s ease; }
-  .card::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:4px; border-radius:0 3px 3px 0; background:#cfc6ab; }
+  .card { position:relative; background:#fff; border-radius:14px; padding:15px 15px 15px 20px; margin-bottom:12px; box-shadow:var(--shadow-sm); border:1px solid var(--line); transition:box-shadow .15s ease; }
+  .card::before { content:''; position:absolute; left:0; top:12px; bottom:12px; width:5px; border-radius:0 4px 4px 0; background:#cfc6ab; }
   .card.tension::before { background:var(--stamp-red); }
   .card.ok::before { background:var(--ok-green); }
   .card .top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
@@ -137,7 +141,7 @@
   input:checked + .slider:before { transform:translateX(20px); }
   .two-col { display:flex; gap:10px; }
   .two-col .field { flex:1; }
-  .btn-primary { width:100%; background:var(--cargo); color:#fff; border:none; padding:14px; border-radius:11px; font-size:15px; font-weight:700; margin-top:6px; letter-spacing:.01em; box-shadow:0 4px 12px rgba(11,74,68,.28); }
+  .btn-primary { width:100%; background:linear-gradient(135deg,#0e5a53,var(--cargo)); color:#fff; border:none; padding:14px; border-radius:11px; font-size:15px; font-weight:700; margin-top:6px; letter-spacing:.01em; box-shadow:0 4px 14px rgba(11,74,68,.32); }
   .btn-primary:active { background:var(--cargo-deep); box-shadow:0 2px 6px rgba(11,74,68,.28); }
   .btn-secondary { width:100%; background:#fff; border:1.5px solid var(--line); color:var(--ink); padding:12px; border-radius:11px; font-size:14px; margin-top:8px; font-weight:700; }
   .close-x { position:absolute; right:16px; top:16px; background:#fff; border:1.5px solid var(--line); width:32px; height:32px; border-radius:9px; font-size:15px; font-weight:700; box-shadow:var(--shadow-sm); }
