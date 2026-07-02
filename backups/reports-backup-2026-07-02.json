@@ -1,0 +1,83 @@
+{
+  "companies": {
+    "-OwAjYxAGawtG18m5sTz": {
+      "name": "SJ IMPEX"
+    },
+    "-OwAjaUvO5ee8TV0ubtI": {
+      "name": "SSGC"
+    },
+    "-OwAjkpCx3NNw5TXCX-S": {
+      "name": "J SQUARE"
+    },
+    "-OwAjnYnGDRVTvXGY0DD": {
+      "name": "MTO"
+    },
+    "-OwAo3hs6w4W8UdWdjkK": {
+      "name": "JASMINE INTER"
+    },
+    "-OwAoBMKLv-sTuEbMecx": {
+      "name": "FORTUNE INTER"
+    },
+    "-OwAxSzLCETBA5d9fQcH": {
+      "name": "GK UNIVERSAL"
+    },
+    "-OwDfbLPZQiga-QVAhDY": {
+      "name": "GSI"
+    }
+  },
+  "invoices": {
+    "-OwAjYxAGawtG18m5sTz": {
+      "-OwAkg5gN_1jAtQ-1E7I": {
+        "addedBy": "Ramesh",
+        "advance": 19281,
+        "advanceInr": 0,
+        "advanceUsd": 19281,
+        "balance": 0,
+        "balanceInr": 0,
+        "balanceUsd": 0,
+        "createdAt": 1782608739018,
+        "customer": "MAHALAKSHMI ENTERPRISES",
+        "date": "2023-09-27",
+        "docs": [
+          {
+            "key": "-OwAjYxAGawtG18m5sTz/-OwAkg5gN_1jAtQ-1E7I-1782865590168-Transaction_Receipt_29-06-2026_12_39_43.pdf",
+            "name": "Transaction Receipt_29-06-2026 12_39_43.pdf"
+          },
+          {
+            "key": "-OwAjYxAGawtG18m5sTz/-OwAkg5gN_1jAtQ-1E7I-1782865878736-0-Invoice-wise_Status_Report_2026-06-28.pdf",
+            "name": "Invoice-wise_Status_Report_2026-06-28.pdf"
+          },
+          {
+            "key": "-OwAjYxAGawtG18m5sTz/-OwAkg5gN_1jAtQ-1E7I-1782865878737-1-Invoice_Status_2026-06-28__1_.xlsx",
+            "name": "Invoice_Status_2026-06-28 (1).xlsx"
+          }
+        ],
+        "exRate": 0,
+        "invNo": "MS-111",
+        "notes": "",
+        "package": "1200 PKG",
+        "referredBy": "NEELA",
+        "remitCompletedDate": "2026-06-28",
+        "remitThirdParty": "",
+        "remitType": "direct",
+        "serialNo": "1",
+        "supplier": "HANGZHOU SUCHAO TECHNOLOGY CO LTD",
+        "tension": false,
+        "total": 19281,
+        "totalInr": 0,
+        "totalUsd": 19281,
+        "updatedAt": 1782865878736
+      }
+    }
+  },
+  "users": {
+    "-OwMTxfA7UWVRl4lR1uH": {
+      "name": "User1",
+      "pin": "5678"
+    },
+    "-OwMUAiNA6gvyl1EvUK6": {
+      "name": "Ramesh",
+      "pin": "1234"
+    }
+  }
+}
