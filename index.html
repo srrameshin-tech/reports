@@ -14,140 +14,150 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink:#1a1f1d; --paper:#faf7f0; --paper-deep:#f1ebdc;
-    --cargo:#0c4f49; --cargo-deep:#082f2b; --cargo-light:#e3efed;
-    --stamp-red:#a8362a; --stamp-red-bg:#fbe8e5;
-    --customs-gold:#a3741f; --customs-gold-bg:#f7ecd6;
-    --ok-green:#2f6b4f; --ok-green-bg:#e3f0e8;
-    --line:#ded6c2;
+    --ink:#17211d; --paper:#f7f5ef; --paper-deep:#eee8d8;
+    --cargo:#0b4a44; --cargo-deep:#072e2a; --cargo-light:#dfece9;
+    --stamp-red:#9c2f24; --stamp-red-bg:#fbe8e5;
+    --customs-gold:#7a4f10; --customs-gold-bg:#f7ecd6;
+    --ok-green:#276148; --ok-green-bg:#e3f0e8;
+    --line:#ddd6c2; --slate:#5c5648; --slate-light:#7d7660;
+    --shadow-sm:0 1px 2px rgba(23,33,29,.06), 0 1px 1px rgba(23,33,29,.04);
+    --shadow-md:0 4px 12px rgba(23,33,29,.09), 0 1px 3px rgba(23,33,29,.06);
+    --shadow-lg:0 12px 32px rgba(23,33,29,.16), 0 2px 8px rgba(23,33,29,.08);
   }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { font-family:'Inter',Roboto,Arial,sans-serif; background:var(--paper); color:var(--ink); padding-bottom:84px; }
+  body { font-family:'Inter',Roboto,Arial,sans-serif; background:var(--paper); color:var(--ink); padding-bottom:84px; -webkit-font-smoothing:antialiased; }
   .hidden { display:none !important; }
   .mono { font-family:'IBM Plex Mono',monospace; }
+  button, input, textarea, select { font-family:inherit; }
+  button { cursor:pointer; transition:transform .12s ease, box-shadow .12s ease, background-color .15s ease, border-color .15s ease, opacity .15s ease; }
+  button:active { transform:scale(.97); }
+  :focus-visible { outline:2px solid var(--customs-gold); outline-offset:2px; }
 
   /* ---------- LOGIN ---------- */
   #loginScreen { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; background:
       repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px, transparent 2px, transparent 14px),
+      radial-gradient(120% 140% at 15% -10%, rgba(255,255,255,.08), transparent 55%),
       linear-gradient(165deg,var(--cargo),var(--cargo-deep)); color:#fff; padding:24px; position:relative; }
   #loginScreen h1 { font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700; margin-bottom:28px; letter-spacing:-0.02em; display:flex; align-items:center; gap:10px; }
-  #loginScreen h1::before { content:''; width:8px; height:28px; background:var(--customs-gold); border-radius:2px; display:inline-block; }
-  .pin-box { background:rgba(255,255,255,.07); backdrop-filter:blur(2px); border:1px solid rgba(255,255,255,.14); border-radius:18px; padding:24px; width:100%; max-width:320px; }
+  #loginScreen h1::before { content:''; width:8px; height:28px; background:var(--customs-gold); border-radius:2px; display:inline-block; box-shadow:0 0 0 3px rgba(122,79,16,.25); }
+  .pin-box { background:rgba(255,255,255,.07); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.16); border-radius:18px; padding:24px; width:100%; max-width:320px; box-shadow:var(--shadow-lg); }
   .pin-display { display:flex; gap:10px; justify-content:center; margin-bottom:20px; }
   .pin-dot { width:14px; height:14px; border-radius:3px; border:2px solid rgba(255,255,255,.7); background:transparent; transform:rotate(45deg); transition:.15s; }
-  .pin-dot.filled { background:var(--customs-gold); border-color:var(--customs-gold); }
+  .pin-dot.filled { background:var(--customs-gold); border-color:var(--customs-gold); box-shadow:0 0 0 4px rgba(122,79,16,.28); }
   .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-  .pin-key { font-family:'IBM Plex Mono',monospace; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); color:#fff; font-size:19px; font-weight:600; padding:16px 0; border-radius:10px; }
+  .pin-key { font-family:'IBM Plex Mono',monospace; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.12); color:#fff; font-size:19px; font-weight:600; padding:16px 0; border-radius:10px; }
   .pin-key:active { background:var(--customs-gold); border-color:var(--customs-gold); }
   .pin-key.empty { background:transparent; border:none; }
-  #loginErr { color:#f3b4ac; font-size:13px; text-align:center; margin-top:10px; height:16px; font-weight:600; }
-  .user-card { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; color:#fff; font-size:15px; font-weight:600; transition:.15s; }
-  .user-card:active { background:rgba(255,255,255,.16); }
-  .user-card .av { font-family:'Space Grotesk',sans-serif; width:38px; height:38px; border-radius:9px; background:var(--customs-gold); color:#2a1c05; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+  #loginErr { color:#ffcfc7; font-size:13px; text-align:center; margin-top:10px; height:16px; font-weight:600; }
+  .user-card { background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; color:#fff; font-size:15px; font-weight:600; transition:.15s; }
+  .user-card:active { background:rgba(255,255,255,.17); }
+  .user-card .av { font-family:'Space Grotesk',sans-serif; width:38px; height:38px; border-radius:9px; background:var(--customs-gold); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
 
   /* ---------- COMPANY SELECT ---------- */
   #companyScreen { min-height:100vh; background:
       repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px, transparent 2px, transparent 14px),
+      radial-gradient(120% 140% at 15% -10%, rgba(255,255,255,.08), transparent 55%),
       linear-gradient(165deg,var(--cargo),var(--cargo-deep)); color:#fff; padding:24px; }
   .company-select-wrap { min-height:calc(100vh - 48px); display:flex; flex-direction:column; align-items:center; justify-content:center; }
-  .company-card { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; color:#fff; font-size:15px; font-weight:700; width:100%; transition:.15s; font-family:'Space Grotesk',sans-serif; }
-  .company-card:active { background:rgba(255,255,255,.16); }
+  .company-card { background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; color:#fff; font-size:15px; font-weight:700; width:100%; transition:.15s; font-family:'Space Grotesk',sans-serif; }
+  .company-card:active { background:rgba(255,255,255,.17); }
   .company-card .av { font-family:'IBM Plex Mono',monospace; width:38px; height:38px; border-radius:9px; background:#8a5e0f; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; flex-shrink:0; font-size:14px; }
   .company-pill { background:#8a5e0f; border:1.5px solid #5c3d09; color:#fff; padding:7px 14px; border-radius:8px; font-size:13.5px; font-weight:800; display:inline-flex; align-items:center; gap:6px; }
 
   /* ---------- COMPANY MANAGEMENT (settings) ---------- */
-  .company-row { display:flex; align-items:center; justify-content:space-between; background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+  .company-row { display:flex; align-items:center; justify-content:space-between; background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:8px; box-shadow:var(--shadow-sm); }
   .company-row .name { font-weight:700; font-size:14px; font-family:'Space Grotesk',sans-serif; }
   .company-row .acts { display:flex; gap:6px; }
   .company-row .acts button { border:1.5px solid var(--cargo); background:var(--cargo-light); color:var(--cargo); border-radius:7px; padding:7px 12px; font-size:12px; font-weight:700; }
   .company-row .acts button.danger { color:#fff; background:var(--stamp-red); border-color:var(--stamp-red); }
 
   /* ---------- HEADER ---------- */
-  header { background:linear-gradient(150deg,var(--cargo),var(--cargo-deep)); color:#fff; padding:18px 16px 16px; position:sticky; top:0; z-index:50; }
+  header { background:linear-gradient(150deg,var(--cargo),var(--cargo-deep)); color:#fff; padding:18px 16px 16px; position:sticky; top:0; z-index:50; box-shadow:0 2px 10px rgba(7,46,42,.25); }
   header .row { display:flex; justify-content:space-between; align-items:center; }
   header h2 { font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:700; letter-spacing:-0.01em; }
-  header .lock { background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.2); color:#fff; padding:6px 11px; border-radius:8px; font-size:12px; font-weight:600; }
+  header .lock { background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22); color:#fff; padding:6px 11px; border-radius:8px; font-size:12px; font-weight:600; }
   .summary-strip { display:flex; gap:8px; margin-top:14px; overflow-x:auto; padding-bottom:2px; }
-  .sum-card { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:9px 13px; min-width:84px; flex-shrink:0; }
+  .sum-card { background:rgba(255,255,255,.11); border:1px solid rgba(255,255,255,.14); border-radius:10px; padding:9px 13px; min-width:84px; flex-shrink:0; }
   .sum-card .n { font-family:'IBM Plex Mono',monospace; font-size:19px; font-weight:700; line-height:1.1; }
-  .sum-card .l { font-size:10px; opacity:.8; font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
+  .sum-card .l { font-size:10px; opacity:.85; font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
 
   /* ---------- TABS ---------- */
   .tabbar { display:flex; background:var(--paper); position:sticky; top:0; z-index:40; border-bottom:1px solid var(--line); overflow-x:auto; }
-  .tabbar button { flex:1; min-width:78px; padding:14px 6px; font-size:15px; background:none; border:none; color:#3a362c; border-bottom:3px solid transparent; white-space:nowrap; font-weight:700; }
+  .tabbar button { flex:1; min-width:78px; padding:14px 6px; font-size:15px; background:none; border:none; color:var(--slate); border-bottom:3px solid transparent; white-space:nowrap; font-weight:700; }
   .tabbar button.active { color:var(--cargo); border-color:var(--customs-gold); }
 
   /* ---------- CONTENT ---------- */
   .content { padding:14px; }
-  .fab { position:fixed; bottom:22px; right:18px; background:var(--cargo); color:#fff; width:56px; height:56px; border-radius:16px; border:none; font-size:28px; box-shadow:0 6px 16px rgba(12,79,73,.35); z-index:60; }
+  .fab { position:fixed; bottom:22px; right:18px; background:var(--cargo); color:#fff; width:56px; height:56px; border-radius:16px; border:none; font-size:28px; box-shadow:0 8px 20px rgba(11,74,68,.4); z-index:60; }
+  .fab:active { box-shadow:0 4px 10px rgba(11,74,68,.35); }
 
-  .card { position:relative; background:#fff; border-radius:10px; padding:14px 14px 14px 18px; margin-bottom:12px; box-shadow:0 1px 3px rgba(28,31,29,.06); border:1px solid var(--line); }
+  .card { position:relative; background:#fff; border-radius:12px; padding:14px 14px 14px 18px; margin-bottom:12px; box-shadow:var(--shadow-sm); border:1px solid var(--line); transition:box-shadow .15s ease; }
   .card::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:4px; border-radius:0 3px 3px 0; background:#cfc6ab; }
   .card.tension::before { background:var(--stamp-red); }
   .card.ok::before { background:var(--ok-green); }
   .card .top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
   .card .inv { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:15px; color:var(--cargo); letter-spacing:.01em; }
-  .card .date { font-size:11px; color:#6b6557; font-weight:600; }
+  .card .date { font-size:11px; color:var(--slate); font-weight:600; }
   .badges { display:flex; gap:6px; flex-wrap:wrap; margin:7px 0; }
-  .badge { font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:3px 9px; border-radius:4px; font-weight:700; letter-spacing:.01em; border:1px solid transparent; }
+  .badge { font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:3px 9px; border-radius:5px; font-weight:700; letter-spacing:.01em; border:1px solid transparent; }
   .badge.pending { background:var(--stamp-red-bg); color:var(--stamp-red); border-color:#f0c4bd; }
   .badge.partial { background:var(--customs-gold-bg); color:var(--customs-gold); border-color:#e8d29a; }
   .badge.completed { background:var(--ok-green-bg); color:var(--ok-green); border-color:#bfe0cd; }
   .badge.tension-yes { background:var(--stamp-red-bg); color:var(--stamp-red); border-color:#f0c4bd; }
   .badge.tension-no { background:var(--cargo-light); color:var(--cargo); border-color:#c9ddd9; }
-  .row2 { display:flex; justify-content:space-between; gap:10px; font-size:13px; color:#222; margin:4px 0; }
-  .row2 span:first-child { color:#6b6557; font-weight:500; flex-shrink:0; }
-  .row2 b { color:#1a1f1d; font-weight:700; text-align:right; }
+  .row2 { display:flex; justify-content:space-between; gap:10px; font-size:13px; color:var(--ink); margin:4px 0; }
+  .row2 span:first-child { color:var(--slate); font-weight:500; flex-shrink:0; }
+  .row2 b { color:var(--ink); font-weight:700; text-align:right; }
   .card .actions { display:flex; gap:8px; margin-top:11px; padding-top:10px; border-top:1px dashed var(--line); }
-  .card .actions button { flex:1; padding:7px 0; font-size:12px; font-weight:600; border-radius:8px; border:1px solid var(--line); background:var(--paper); color:#3a362c; }
+  .card .actions button { flex:1; padding:7px 0; font-size:12px; font-weight:600; border-radius:8px; border:1px solid var(--line); background:var(--paper); color:var(--slate); }
   .card .actions button.danger { color:var(--stamp-red); border-color:#f0c4bd; }
 
-  .empty { text-align:center; color:#6b6557; padding:60px 20px; font-size:13.5px; font-weight:500; line-height:1.6; }
+  .empty { text-align:center; color:var(--slate); padding:60px 20px; font-size:13.5px; font-weight:500; line-height:1.6; }
 
   /* ---------- MODAL ---------- */
-  .modal-overlay { position:fixed; inset:0; background:rgba(20,24,22,.55); z-index:100; display:flex; align-items:flex-end; }
-  .modal-sheet { background:var(--paper); width:100%; max-height:92vh; overflow-y:auto; border-radius:20px 20px 0 0; padding:20px 18px 30px; position:relative; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(15,20,18,.6); backdrop-filter:blur(1px); z-index:100; display:flex; align-items:flex-end; }
+  .modal-sheet { background:var(--paper); width:100%; max-height:92vh; overflow-y:auto; border-radius:20px 20px 0 0; padding:20px 18px 30px; position:relative; box-shadow:var(--shadow-lg); }
   .modal-sheet h3 { font-family:'Space Grotesk',sans-serif; font-weight:700; margin-bottom:16px; color:var(--cargo); font-size:19px; }
   .field { margin-bottom:14px; }
-  .field label { font-size:11.5px; color:#5c5648; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .field label { font-size:11.5px; color:var(--slate); display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
   .edit-lock-btn { background:var(--cargo-light); color:var(--cargo); border:none; border-radius:5px; padding:2px 8px; font-size:10px; font-weight:700; text-transform:none; letter-spacing:0; }
-  .field input[readonly] { background:var(--paper-deep); color:#6b6557; }
-  .field input, .field select, .field textarea { width:100%; padding:11px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14.5px; background:#fff; font-weight:700; color:var(--ink); font-family:'IBM Plex Mono',monospace; }
+  .field input[readonly] { background:var(--paper-deep); color:var(--slate); }
+  .field input, .field select, .field textarea { width:100%; padding:11px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14.5px; background:#fff; font-weight:700; color:var(--ink); font-family:'IBM Plex Mono',monospace; transition:border-color .15s ease, box-shadow .15s ease; }
   .field textarea { font-family:'Inter',sans-serif; font-weight:500; }
   .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--cargo); box-shadow:0 0 0 3px var(--cargo-light); }
-  .field input::placeholder, .field textarea::placeholder { font-weight:400; color:#a8a08c; }
+  .field input::placeholder, .field textarea::placeholder { font-weight:400; color:var(--slate-light); }
   .field textarea { resize:vertical; min-height:60px; }
   .toggle-row { display:flex; align-items:center; justify-content:space-between; background:#fff; border:1.5px solid var(--line); padding:11px 13px; border-radius:10px; margin-bottom:14px; }
   .toggle-row span { font-size:13px; font-weight:700; }
   .switch { position:relative; width:46px; height:26px; flex-shrink:0; }
   .switch input { opacity:0; width:0; height:0; }
   .slider { position:absolute; inset:0; background:#d8d2c0; border-radius:26px; transition:.2s; cursor:pointer; }
-  .slider:before { content:''; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .slider:before { content:''; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
   input:checked + .slider { background:var(--stamp-red); }
   input:checked + .slider:before { transform:translateX(20px); }
   .two-col { display:flex; gap:10px; }
   .two-col .field { flex:1; }
-  .btn-primary { width:100%; background:var(--cargo); color:#fff; border:none; padding:14px; border-radius:11px; font-size:15px; font-weight:700; margin-top:6px; letter-spacing:.01em; }
-  .btn-primary:active { background:var(--cargo-deep); }
+  .btn-primary { width:100%; background:var(--cargo); color:#fff; border:none; padding:14px; border-radius:11px; font-size:15px; font-weight:700; margin-top:6px; letter-spacing:.01em; box-shadow:0 4px 12px rgba(11,74,68,.28); }
+  .btn-primary:active { background:var(--cargo-deep); box-shadow:0 2px 6px rgba(11,74,68,.28); }
   .btn-secondary { width:100%; background:#fff; border:1.5px solid var(--line); color:var(--ink); padding:12px; border-radius:11px; font-size:14px; margin-top:8px; font-weight:700; }
-  .close-x { position:absolute; right:16px; top:16px; background:#fff; border:1.5px solid var(--line); width:32px; height:32px; border-radius:9px; font-size:15px; font-weight:700; }
+  .close-x { position:absolute; right:16px; top:16px; background:#fff; border:1.5px solid var(--line); width:32px; height:32px; border-radius:9px; font-size:15px; font-weight:700; box-shadow:var(--shadow-sm); }
   .balance-hint { font-size:11.5px; color:var(--cargo); font-weight:700; margin-top:-8px; margin-bottom:10px; }
   .dup-warning { font-size:11.5px; color:var(--stamp-red); font-weight:700; margin-top:-8px; margin-bottom:10px; }
-  .suggest-dropdown { position:absolute; top:100%; left:0; right:0; background:#fff; border:1.5px solid var(--cargo); border-top:none; border-radius:0 0 9px 9px; max-height:180px; overflow-y:auto; z-index:30; box-shadow:0 6px 14px rgba(28,31,29,.12); }
+  .suggest-dropdown { position:absolute; top:100%; left:0; right:0; background:#fff; border:1.5px solid var(--cargo); border-top:none; border-radius:0 0 9px 9px; max-height:180px; overflow-y:auto; z-index:30; box-shadow:var(--shadow-md); }
   .suggest-item { padding:10px 12px; font-size:13.5px; font-weight:600; color:var(--ink); font-family:'IBM Plex Mono',monospace; border-bottom:1px solid var(--line); }
   .suggest-item:last-child { border-bottom:none; }
   .suggest-item:active { background:var(--cargo-light); }
 
   /* ---------- REPORTS TAB ---------- */
-  .report-btn { display:flex; align-items:center; gap:13px; background:#fff; border-radius:11px; padding:15px; margin-bottom:10px; border:1px solid var(--line); width:100%; text-align:left; }
+  .report-btn { display:flex; align-items:center; gap:13px; background:#fff; border-radius:11px; padding:15px; margin-bottom:10px; border:1px solid var(--line); width:100%; text-align:left; box-shadow:var(--shadow-sm); }
   .report-btn .ic { font-size:22px; flex-shrink:0; width:38px; height:38px; display:flex; align-items:center; justify-content:center; background:var(--cargo-light); border-radius:9px; }
   .report-btn .txt b { display:block; font-size:14px; font-weight:700; font-family:'Space Grotesk',sans-serif; }
-  .report-btn .txt span { font-size:11.5px; color:#6b6557; font-weight:500; }
+  .report-btn .txt span { font-size:11.5px; color:var(--slate); font-weight:500; }
   .filter-bar { display:flex; gap:8px; margin-bottom:14px; overflow-x:auto; }
   .filter-chip { padding:8px 16px; border-radius:8px; background:#fff; border:1.5px solid var(--line); font-size:13.5px; white-space:nowrap; color:var(--ink); font-weight:800; }
   .filter-chip.active { background:var(--cargo); color:#fff; border-color:var(--cargo); }
 
-  #toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:11px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:200; opacity:0; transition:.3s; }
+  #toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:11px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:200; opacity:0; transition:.3s; box-shadow:var(--shadow-lg); }
   #toast.show { opacity:1; }
 </style>
 </head>
@@ -276,7 +286,7 @@
       <p style="font-size:12px;color:#1a1a1a;font-weight:600;margin-top:8px;line-height:1.6;">⚠️ Before deleting the Firebase project, take this backup and save it on your phone. You can use this file to restore data in any new Firebase project anytime.</p>
 
       <h3 style="margin:22px 0 10px;color:#0f766e;">App Info</h3>
-      <p style="font-size:12px;color:#444;">Import Reports v1.0 · reports.sramesh.in</p>
+      <p style="font-size:12px;color:var(--slate);">Import Reports v1.0 · reports.sramesh.in</p>
     </div>
   </div>
 
@@ -323,7 +333,7 @@
 
     <div class="field">
       <label>Serial No</label>
-      <input type="text" id="f_serialNo" readonly style="background:var(--paper-deep);color:#6b6557;">
+      <input type="text" id="f_serialNo" readonly style="background:var(--paper-deep);color:var(--slate);">
     </div>
     <div class="field">
       <label>Commercial Invoice Number *</label>
@@ -357,7 +367,7 @@
         <button type="button" class="btn-secondary" style="margin-top:0;" onclick="document.getElementById('f_docFile').click()">📷 Attach Photo / Document</button>
       </div>
       <div id="docListWrap" style="margin-top:8px;"></div>
-      <div id="docUploadStatus" style="font-size:11px;color:#6b6557;margin-top:5px;"></div>
+      <div id="docUploadStatus" style="font-size:11px;color:var(--slate);margin-top:5px;"></div>
     </div>
 
     <div class="field" style="position:relative;">
@@ -370,9 +380,9 @@
       <label>Exchange Rate (1 USD = ? INR)</label>
       <input type="number" id="f_exrate" placeholder="e.g. 83.50" inputmode="decimal" oninput="onExRateChange()">
     </div>
-    <p style="font-size:11px;color:#6b6557;margin-top:-10px;margin-bottom:10px;">Enter the rate once. Type either USD or INR below for Total/Advance/Balance — the other currency fills in automatically.</p>
+    <p style="font-size:11px;color:var(--slate);margin-top:-10px;margin-bottom:10px;">Enter the rate once. Type either USD or INR below for Total/Advance/Balance — the other currency fills in automatically.</p>
 
-    <p style="font-size:11px;color:#6b6557;margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">💵 Total Invoice Amount</p>
+    <p style="font-size:11px;color:var(--slate);margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">💵 Total Invoice Amount</p>
     <div class="two-col">
       <div class="field">
         <label>USD</label>
@@ -384,7 +394,7 @@
       </div>
     </div>
 
-    <p style="font-size:11px;color:#6b6557;margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">💰 Advance Received</p>
+    <p style="font-size:11px;color:var(--slate);margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">💰 Advance Received</p>
     <div class="two-col">
       <div class="field">
         <label>USD</label>
@@ -396,7 +406,7 @@
       </div>
     </div>
 
-    <p style="font-size:11px;color:#6b6557;margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">🧾 Balance Amount</p>
+    <p style="font-size:11px;color:var(--slate);margin:14px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">🧾 Balance Amount</p>
     <div class="two-col">
       <div class="field">
         <label>USD <button type="button" class="edit-lock-btn hidden" id="edit_balance_usd" onclick="unlockField('balance','usd')">Edit</button></label>
@@ -407,7 +417,7 @@
         <input type="number" id="f_balance_inr" placeholder="0.00" inputmode="decimal" oninput="onAmountInput('balance','inr')">
       </div>
     </div>
-    <p style="font-size:11px;color:#6b6557;margin-top:6px;margin-bottom:6px;">Balance auto-calculated as Total − Advance (per currency). Tap "Edit" to override a locked field.</p>
+    <p style="font-size:11px;color:var(--slate);margin-top:6px;margin-bottom:6px;">Balance auto-calculated as Total − Advance (per currency). Tap "Edit" to override a locked field.</p>
     <div class="balance-hint" id="balanceHint"></div>
 
     <div class="field hidden" id="remitCompletedDateWrap">
