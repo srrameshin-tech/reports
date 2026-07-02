@@ -32,6 +32,8 @@ let pendingDocFiles = [];      // [File] newly selected files not yet uploaded (
 let removedDocKeys = [];       // keys of previously saved docs the user removed during this edit session
 let listFilter = "all";
 let currentReportType = null;
+let ledgerType = 'supplier';
+let ledgerName = '';
 
 /* ====================== UTIL ====================== */
 function toast(msg) {
@@ -1111,14 +1113,17 @@ function openReport(type) {
     tension: '⚠️ Issue / Pending Cases',
     remittance: '💰 Remittance Pending',
     referredby: '🤝 Referred By Report',
+    ledger: '📒 Supplier/Customer Ledger',
     summary: '📈 Summary Dashboard'
   };
   document.getElementById('reportTitle').textContent = titles[type] || 'Report';
   const dateFilterWrap = document.getElementById('reportDateFilter');
   const applyBtn = document.getElementById('rep_applyDate');
   const searchWrap = document.getElementById('reportSearchWrap');
+  const ledgerWrap = document.getElementById('reportLedgerWrap');
+  const exportWrap = document.getElementById('reportExportWrap');
   document.getElementById('reportSearchBox').value = '';
-  if (type === 'summary' || type === 'referredby') {
+  if (type === 'summary' || type === 'referredby' || type === 'ledger') {
     searchWrap.classList.add('hidden');
   } else {
     searchWrap.classList.remove('hidden');
@@ -1132,12 +1137,65 @@ function openReport(type) {
     dateFilterWrap.classList.add('hidden');
     applyBtn.classList.add('hidden');
   }
+  if (type === 'ledger') {
+    ledgerWrap.classList.remove('hidden');
+    exportWrap.classList.add('hidden');
+    ledgerType = 'supplier';
+    ledgerName = '';
+    document.getElementById('ledgerChipSupplier').classList.add('active');
+    document.getElementById('ledgerChipCustomer').classList.remove('active');
+    document.getElementById('ledgerNameInput').value = '';
+    document.getElementById('ledgerNameInput').placeholder = 'Type supplier name...';
+    hideLedgerSuggestions();
+  } else {
+    ledgerWrap.classList.add('hidden');
+    exportWrap.classList.remove('hidden');
+  }
   document.getElementById('reportModalOverlay').classList.remove('hidden');
   renderReportBody();
 }
 function closeReportModal() {
   document.getElementById('reportModalOverlay').classList.add('hidden');
   currentReportType = null;
+}
+
+function setLedgerType(type) {
+  ledgerType = type;
+  document.getElementById('ledgerChipSupplier').classList.toggle('active', type === 'supplier');
+  document.getElementById('ledgerChipCustomer').classList.toggle('active', type === 'customer');
+  const input = document.getElementById('ledgerNameInput');
+  input.value = '';
+  input.placeholder = 'Type ' + type + ' name...';
+  ledgerName = '';
+  hideLedgerSuggestions();
+  renderReportBody();
+}
+function onLedgerNameInput(value) {
+  ledgerName = value.trim();
+  const wrap = document.getElementById('ledgerSuggestWrap');
+  const list = ledgerType === 'supplier' ? supplierNames : customerNames;
+  const query = value.trim().toLowerCase();
+  const matches = query ? list.filter(n => n.toLowerCase().includes(query)) : list;
+  if (matches.length === 0) {
+    wrap.classList.add('hidden');
+    wrap.innerHTML = '';
+  } else {
+    wrap.innerHTML = matches.slice(0, 8).map(n =>
+      `<div class="suggest-item" onclick="selectLedgerName('${n.replace(/'/g, "\\'")}')">${escapeHtml(n)}</div>`
+    ).join('');
+    wrap.classList.remove('hidden');
+  }
+  renderReportBody();
+}
+function hideLedgerSuggestions() {
+  const wrap = document.getElementById('ledgerSuggestWrap');
+  if (wrap) wrap.classList.add('hidden');
+}
+function selectLedgerName(value) {
+  ledgerName = value;
+  document.getElementById('ledgerNameInput').value = value;
+  hideLedgerSuggestions();
+  renderReportBody();
 }
 
 function getReportData() {
@@ -1167,6 +1225,65 @@ function getReportData() {
 
 function renderReportBody() {
   const body = document.getElementById('reportBody');
+
+  if (currentReportType === 'ledger') {
+    if (!ledgerName) {
+      body.innerHTML = `<div class="empty">Select a ${ledgerType} above to view their ledger</div>`;
+      return;
+    }
+    const matchField = ledgerType === 'supplier' ? 'supplier' : 'customer';
+    const matches = Object.entries(invoicesCache).filter(([id, i]) => (i[matchField] || '') === ledgerName);
+    if (matches.length === 0) {
+      body.innerHTML = `<div class="empty">No invoices found for ${escapeHtml(ledgerName)}</div>`;
+      return;
+    }
+    const totalUsd = matches.reduce((s, [id, i]) => s + (Number(i.totalUsd) || 0), 0);
+    const advUsd = matches.reduce((s, [id, i]) => s + (Number(i.advanceUsd) || 0), 0);
+    const balUsd = matches.reduce((s, [id, i]) => s + (Number(i.balanceUsd) || 0), 0);
+    const totalInr = matches.reduce((s, [id, i]) => s + (Number(i.totalInr) || 0), 0);
+    const advInr = matches.reduce((s, [id, i]) => s + (Number(i.advanceInr) || 0), 0);
+    const balInr = matches.reduce((s, [id, i]) => s + (Number(i.balanceInr) || 0), 0);
+    const completedCount = matches.filter(([id, i]) => remitStatus(i.total, i.advance, i.balance) === 'completed').length;
+    const pendingCount = matches.length - completedCount;
+    const issueCount = matches.filter(([id, i]) => i.tension).length;
+    const sortedMatches = matches.slice().sort((a, b) => (b[1].date || '').localeCompare(a[1].date || ''));
+
+    const summaryCard = `
+      <div class="card" style="border:2px solid var(--cargo);">
+        <div class="inv" style="margin-bottom:6px;">${escapeHtml(ledgerName)}</div>
+        <div class="row2"><span>Total Invoices</span><b>${matches.length}</b></div>
+        <div class="row2"><span>Remittance Completed</span><b>${completedCount}</b></div>
+        <div class="row2"><span>Remittance Pending</span><b>${pendingCount}</b></div>
+        ${issueCount ? `<div class="row2"><span>Issue Cases</span><b>⚠️ ${issueCount}</b></div>` : ''}
+        <div class="row2"><span>Total Business (USD)</span><b>${fmtUSD(totalUsd)}</b></div>
+        <div class="row2"><span>Advance Received (USD)</span><b>${fmtUSD(advUsd)}</b></div>
+        <div class="row2"><span>Balance Pending (USD)</span><b>${fmtUSD(balUsd)}</b></div>
+        ${(totalInr || advInr || balInr) ? `
+        <div class="row2"><span>Total Business (INR)</span><b>${fmtMoney(totalInr)}</b></div>
+        <div class="row2"><span>Advance Received (INR)</span><b>${fmtMoney(advInr)}</b></div>
+        <div class="row2"><span>Balance Pending (INR)</span><b>${fmtMoney(balInr)}</b></div>` : ''}
+      </div>`;
+
+    const invoiceCards = sortedMatches.map(([id, i]) => {
+      const rs = remitStatus(i.total, i.advance, i.balance);
+      const otherField = ledgerType === 'supplier' ? 'Customer' : 'Supplier';
+      const otherValue = ledgerType === 'supplier' ? i.customer : i.supplier;
+      return `
+        <div class="card ${i.tension ? 'tension' : (rs === 'completed' ? 'ok' : '')}">
+          <div class="inv">${i.serialNo ? '#' + escapeHtml(i.serialNo) + ' · ' : ''}${escapeHtml(i.invNo)} - ${fmtDate(i.date)}</div>
+          <div class="badges">
+            <span class="badge ${rs}">💰 ${statusLabel(rs)}</span>
+            <span class="badge ${i.tension ? 'tension-yes' : 'tension-no'}">${i.tension ? '⚠️ Issue' : '✅ OK'}</span>
+          </div>
+          <div class="row2"><span>${otherField}</span><b>${escapeHtml(otherValue || '-')}</b></div>
+          <div class="row2"><span>Total / Adv / Bal (USD)</span><b>${fmtUSD(i.totalUsd)} / ${fmtUSD(i.advanceUsd)} / ${fmtUSD(i.balanceUsd)}</b></div>
+        </div>`;
+    }).join('');
+
+    body.innerHTML = summaryCard + invoiceCards;
+    return;
+  }
+
   const entries = getReportData();
 
   if (currentReportType === 'summary') {
