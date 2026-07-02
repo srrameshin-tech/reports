@@ -466,6 +466,7 @@ function renderInvoiceList() {
         ${inv.remitCompletedDate ? `<div class="row2"><span>Completed On</span><b>${fmtDate(inv.remitCompletedDate)}</b></div>` : ''}
         <div class="actions">
           <button onclick="openInvoiceModal('${id}')">✏️ Edit</button>
+          <button onclick="shareInvoicePDF('${id}')">📤 Share</button>
           <button class="danger" onclick="deleteInvoice('${id}')">🗑️ Delete</button>
         </div>
       </div>`;
@@ -1386,6 +1387,112 @@ function renderReportBody() {
 }
 
 /* ====================== EXPORT: PDF ====================== */
+function buildInvoicePDF(inv) {
+  const doc = new jspdf.jsPDF();
+  const rs = remitStatus(inv.total, inv.advance, inv.balance);
+
+  doc.setFontSize(16);
+  doc.setFont(undefined, 'bold');
+  doc.text(currentCompanyName || 'Invoice', 14, 18);
+  doc.setFont(undefined, 'normal');
+  doc.setFontSize(11);
+  doc.text('Invoice Summary', 14, 26);
+  doc.setFontSize(9);
+  doc.setTextColor(110, 110, 110);
+  doc.text('Generated: ' + new Date().toLocaleString('en-IN'), 14, 32);
+  doc.setTextColor(0, 0, 0);
+  doc.setLineWidth(0.5);
+  doc.line(14, 36, 196, 36);
+
+  const detailRows = [
+    ['Invoice No', inv.invNo || '-'],
+    ['Serial No', inv.serialNo || '-'],
+    ['Invoice Date', fmtDate(inv.date)],
+    ['Supplier', inv.supplier || '-'],
+    ['Customer', inv.customer || '-'],
+    ['Package Details', inv.package || '-'],
+    ['Referred By', inv.referredBy || '-'],
+  ];
+  doc.autoTable({
+    startY: 41,
+    body: detailRows,
+    theme: 'plain',
+    styles: { fontSize: 10, cellPadding: 2 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 }, 1: { cellWidth: 137 } }
+  });
+
+  let y = doc.lastAutoTable.finalY + 6;
+  const amountRows = [];
+  if (inv.totalUsd || inv.advanceUsd || inv.balanceUsd) {
+    amountRows.push(['Amount (USD)', fmtUSD(inv.totalUsd), fmtUSD(inv.advanceUsd), fmtUSD(inv.balanceUsd)]);
+  }
+  if (inv.totalInr || inv.advanceInr || inv.balanceInr) {
+    amountRows.push(['Amount (INR)', fmtMoney(inv.totalInr), fmtMoney(inv.advanceInr), fmtMoney(inv.balanceInr)]);
+  }
+  if (amountRows.length) {
+    doc.autoTable({
+      startY: y,
+      head: [['', 'Total', 'Advance', 'Balance']],
+      body: amountRows,
+      styles: { fontSize: 10, halign: 'right' },
+      headStyles: { fillColor: [15, 118, 110] },
+      columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
+    });
+    y = doc.lastAutoTable.finalY + 6;
+  }
+
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'bold');
+  doc.text('Remittance Status: ' + statusLabel(rs), 14, y);
+  doc.setFont(undefined, 'normal');
+  y += 6;
+  doc.text('Remittance Type: ' + (inv.remitType === '3rdparty' ? '3rd Party' + (inv.remitThirdParty ? ' (' + inv.remitThirdParty + ')' : '') : 'Direct'), 14, y);
+  if (inv.remitCompletedDate) {
+    y += 6;
+    doc.text('Completed On: ' + fmtDate(inv.remitCompletedDate), 14, y);
+  }
+  if (inv.tension) {
+    y += 6;
+    doc.setTextColor(180, 40, 30);
+    doc.text('⚠ Marked as Issue / Attention Needed', 14, y);
+    doc.setTextColor(0, 0, 0);
+  }
+  if (inv.notes) {
+    y += 8;
+    doc.setFont(undefined, 'bold');
+    doc.text('Notes:', 14, y);
+    doc.setFont(undefined, 'normal');
+    const lines = doc.splitTextToSize(inv.notes, 180);
+    doc.text(lines, 14, y + 6);
+  }
+
+  return doc;
+}
+
+function shareInvoicePDF(id) {
+  const inv = invoicesCache[id];
+  if (!inv) { toast('⚠️ Invoice not found'); return; }
+  if (typeof jspdf === 'undefined' || !jspdf.jsPDF) {
+    toast('⚠️ PDF library not loaded. Check your internet connection and try again.');
+    return;
+  }
+  const doc = buildInvoicePDF(inv);
+  const filename = 'Invoice-' + (inv.invNo || id).replace(/[^a-zA-Z0-9._-]/g, '_') + '.pdf';
+  const blob = doc.output('blob');
+  const file = new File([blob], filename, { type: 'application/pdf' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({
+      files: [file],
+      title: 'Invoice ' + (inv.invNo || ''),
+      text: (currentCompanyName || '') + ' — Invoice ' + (inv.invNo || '') + (inv.customer ? ' for ' + inv.customer : '')
+    }).catch(() => {});
+  } else {
+    doc.save(filename);
+    toast('📄 PDF downloaded (sharing not supported on this browser)');
+  }
+}
+
 function exportReportPDF() {
   try {
     if (typeof jspdf === 'undefined' || !jspdf.jsPDF) {
