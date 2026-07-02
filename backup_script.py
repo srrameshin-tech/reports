@@ -37,6 +37,9 @@ def sign_in():
         },
         timeout=30,
     )
+    if resp.status_code != 200:
+        print("Firebase sign-in failed. Response body:")
+        print(resp.text)
     resp.raise_for_status()
     return resp.json()["idToken"]
 
