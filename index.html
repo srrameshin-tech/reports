@@ -132,6 +132,7 @@
   .btn-secondary { width:100%; background:#fff; border:1.5px solid var(--line); color:var(--ink); padding:12px; border-radius:11px; font-size:14px; margin-top:8px; font-weight:700; }
   .close-x { position:absolute; right:16px; top:16px; background:#fff; border:1.5px solid var(--line); width:32px; height:32px; border-radius:9px; font-size:15px; font-weight:700; }
   .balance-hint { font-size:11.5px; color:var(--cargo); font-weight:700; margin-top:-8px; margin-bottom:10px; }
+  .dup-warning { font-size:11.5px; color:var(--stamp-red); font-weight:700; margin-top:-8px; margin-bottom:10px; }
   .suggest-dropdown { position:absolute; top:100%; left:0; right:0; background:#fff; border:1.5px solid var(--cargo); border-top:none; border-radius:0 0 9px 9px; max-height:180px; overflow-y:auto; z-index:30; box-shadow:0 6px 14px rgba(28,31,29,.12); }
   .suggest-item { padding:10px 12px; font-size:13.5px; font-weight:600; color:var(--ink); font-family:'IBM Plex Mono',monospace; border-bottom:1px solid var(--line); }
   .suggest-item:last-child { border-bottom:none; }
@@ -326,7 +327,8 @@
     </div>
     <div class="field">
       <label>Commercial Invoice Number *</label>
-      <input type="text" id="f_invno" placeholder="e.g. CI-2026-0042">
+      <input type="text" id="f_invno" placeholder="e.g. CI-2026-0042" oninput="checkInvNoDuplicate()">
+      <div class="dup-warning hidden" id="invNoDupWarning"></div>
     </div>
     <div class="field">
       <label>Invoice Date</label>
@@ -344,7 +346,8 @@
     </div>
     <div class="field">
       <label>Package Details *</label>
-      <textarea id="f_package" placeholder="Item description, qty, packages etc."></textarea>
+      <textarea id="f_package" placeholder="Item description, qty, packages etc." oninput="checkPackageDuplicate()"></textarea>
+      <div class="dup-warning hidden" id="packageDupWarning"></div>
     </div>
 
     <div class="field">
