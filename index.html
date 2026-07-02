@@ -248,6 +248,10 @@
         <span class="ic">🤝</span>
         <span class="txt"><b>Referred By Report</b><span>Orders grouped by referrer</span></span>
       </button>
+      <button class="report-btn" onclick="openReport('ledger')">
+        <span class="ic">📒</span>
+        <span class="txt"><b>Supplier/Customer Ledger</b><span>Total business & pending by party</span></span>
+      </button>
       <button class="report-btn" onclick="openReport('summary')">
         <span class="ic">📈</span>
         <span class="txt"><b>Summary Dashboard</b><span>All totals in one view</span></span>
@@ -448,9 +452,23 @@
     <div class="field" id="reportSearchWrap" style="margin-bottom:10px;">
       <input type="text" id="reportSearchBox" placeholder="🔍 Search Invoice No, Supplier, Customer, Referred By..." oninput="renderReportBody()" style="font-weight:600;">
     </div>
+    <div id="reportLedgerWrap" class="hidden" style="margin-bottom:10px;">
+      <div class="filter-bar" style="margin-bottom:10px;">
+        <button class="filter-chip active" id="ledgerChipSupplier" onclick="setLedgerType('supplier')">Supplier</button>
+        <button class="filter-chip" id="ledgerChipCustomer" onclick="setLedgerType('customer')">Customer</button>
+      </div>
+      <div class="field" style="position:relative;">
+        <input type="text" id="ledgerNameInput" placeholder="Type supplier name..." autocomplete="off"
+          oninput="onLedgerNameInput(this.value)" onfocus="onLedgerNameInput(this.value)"
+          onblur="setTimeout(hideLedgerSuggestions,150)" style="font-weight:600;">
+        <div class="suggest-dropdown hidden" id="ledgerSuggestWrap"></div>
+      </div>
+    </div>
     <div id="reportBody"></div>
-    <button class="btn-primary" onclick="exportReportPDF()">📄 Download PDF</button>
-    <button class="btn-secondary" onclick="exportReportExcel()">📊 Download Excel</button>
+    <div id="reportExportWrap">
+      <button class="btn-primary" onclick="exportReportPDF()">📄 Download PDF</button>
+      <button class="btn-secondary" onclick="exportReportExcel()">📊 Download Excel</button>
+    </div>
   </div>
 </div>
 
