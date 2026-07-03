@@ -1082,15 +1082,15 @@ function renderSettingsUserList() {
     wrap.innerHTML = ids.map(uid => {
       const u = users[uid];
       return `
-        <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span class="user-card av" style="width:32px;height:32px;background:#e0f2f1;color:#0f766e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">${initials(u.name)}</span>
+        <div class="card" style="padding:12px 14px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span class="user-card av" style="width:32px;height:32px;background:#e0f2f1;color:#0f766e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">${initials(u.name)}</span>
             <span style="font-size:14px;font-weight:600;">${escapeHtml(u.name)}</span>
           </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button onclick="editUserName('${uid}','${escapeHtml(u.name)}')" style="border:1.5px solid #8a6d1d;background:#fdf3d8;color:#8a6d1d;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;">Edit Name</button>
-            <button onclick="editUserPin('${uid}','${escapeHtml(u.name)}')" style="border:1.5px solid #0c4f49;background:#e3efed;color:#0c4f49;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;">Change PIN</button>
-            <button onclick="deleteUser('${uid}')" style="border:1.5px solid #a8362a;color:#fff;background:#a8362a;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;">Remove</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="editUserName('${uid}','${escapeHtml(u.name)}')" style="flex:1;min-width:90px;border:1.5px solid #8a6d1d;background:#fdf3d8;color:#8a6d1d;border-radius:7px;padding:8px 10px;font-size:12px;font-weight:700;">Edit Name</button>
+            <button onclick="editUserPin('${uid}','${escapeHtml(u.name)}')" style="flex:1;min-width:90px;border:1.5px solid #0c4f49;background:#e3efed;color:#0c4f49;border-radius:7px;padding:8px 10px;font-size:12px;font-weight:700;">Change PIN</button>
+            <button onclick="deleteUser('${uid}')" style="flex:1;min-width:90px;border:1.5px solid #a8362a;color:#fff;background:#a8362a;border-radius:7px;padding:8px 10px;font-size:12px;font-weight:700;">Remove</button>
           </div>
         </div>`;
     }).join('');
