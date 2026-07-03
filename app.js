@@ -1087,12 +1087,23 @@ function renderSettingsUserList() {
             <span class="user-card av" style="width:32px;height:32px;background:#e0f2f1;color:#0f766e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">${initials(u.name)}</span>
             <span style="font-size:14px;font-weight:600;">${escapeHtml(u.name)}</span>
           </div>
-          <div style="display:flex;gap:6px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="editUserName('${uid}','${escapeHtml(u.name)}')" style="border:1.5px solid #8a6d1d;background:#fdf3d8;color:#8a6d1d;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;">Edit Name</button>
             <button onclick="editUserPin('${uid}','${escapeHtml(u.name)}')" style="border:1.5px solid #0c4f49;background:#e3efed;color:#0c4f49;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;">Change PIN</button>
             <button onclick="deleteUser('${uid}')" style="border:1.5px solid #a8362a;color:#fff;background:#a8362a;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;">Remove</button>
           </div>
         </div>`;
     }).join('');
+  });
+}
+function editUserName(uid, name) {
+  const newName = prompt('New name for ' + name + ':', name);
+  if (newName === null) return;
+  const trimmed = newName.trim();
+  if (!trimmed) { toast('⚠️ Please enter a valid name'); return; }
+  db.ref(ROOT + '/users/' + uid + '/name').set(trimmed).then(() => {
+    toast('✅ Name updated');
+    renderSettingsUserList();
   });
 }
 function openAddUserModal() {
