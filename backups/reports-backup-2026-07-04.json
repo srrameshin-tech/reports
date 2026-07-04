@@ -1,0 +1,38 @@
+{
+  "companies": {
+    "-OwAjYxAGawtG18m5sTz": {
+      "name": "SJ IMPEX"
+    },
+    "-OwAjaUvO5ee8TV0ubtI": {
+      "name": "SSGC"
+    },
+    "-OwAjkpCx3NNw5TXCX-S": {
+      "name": "J SQUARE"
+    },
+    "-OwAjnYnGDRVTvXGY0DD": {
+      "name": "MTO"
+    },
+    "-OwAo3hs6w4W8UdWdjkK": {
+      "name": "JASMINE INTER"
+    },
+    "-OwAoBMKLv-sTuEbMecx": {
+      "name": "FORTUNE INTER"
+    },
+    "-OwAxSzLCETBA5d9fQcH": {
+      "name": "GK UNIVERSAL"
+    },
+    "-OwDfbLPZQiga-QVAhDY": {
+      "name": "GSI"
+    }
+  },
+  "users": {
+    "-OwMTxfA7UWVRl4lR1uH": {
+      "name": "User 1",
+      "pin": "5678"
+    },
+    "-OwMUAiNA6gvyl1EvUK6": {
+      "name": "Ramesh",
+      "pin": "0101"
+    }
+  }
+}
