@@ -745,7 +745,6 @@ function onExRateChange() {
 function onAmountInput(field, currency) {
   const rate = getExRate();
   const sourceEl = document.getElementById('f_' + field + '_' + currency);
-  delete sourceEl.dataset.manual;
   if (rate > 0 && field !== 'balance') {
     const otherCurrency = currency === 'usd' ? 'inr' : 'usd';
     const otherEl = document.getElementById('f_' + field + '_' + otherCurrency);
