@@ -1,3 +1,14 @@
+/* ====================== GLOBAL ERROR CATCHER (diagnostic) ====================== */
+window.addEventListener('error', function(e) {
+  try {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:14px;padding:20px;max-width:340px;width:100%;"><div style="font-size:13px;color:#a8362a;white-space:pre-wrap;margin-bottom:14px;">⚠️ JS Error caught:\n\n' +
+      (e.message || 'Unknown error') + '\n\nFile: ' + (e.filename ? e.filename.split('/').pop() : '?') + ':' + e.lineno +
+      '</div><button onclick="this.closest(\'div\').parentElement.remove()" style="width:100%;padding:10px;border-radius:8px;border:none;background:#111;color:#fff;font-weight:700;">OK</button></div>';
+    document.body.appendChild(overlay);
+  } catch (err) {}
+});
 /* ====================== FIREBASE CONFIG ====================== */
 const firebaseConfig = {
   apiKey: "AIzaSyCemVHrdqncmTUDnR4KwLr-nb4_lmdMD6w",
