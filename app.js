@@ -661,6 +661,22 @@ function openInvoiceModal(id) {
     document.getElementById('f_total_inr').value = inv.totalInr !== undefined ? (inv.totalInr || '') : (inv.total || '');
     document.getElementById('f_advance_inr').value = inv.advanceInr !== undefined ? (inv.advanceInr || '') : (inv.advance || '');
     document.getElementById('f_balance_inr').value = inv.balanceInr !== undefined ? (inv.balanceInr || '') : (inv.balance || '');
+    // If a saved value doesn't match what fresh auto-calculation would produce, it was a manual
+    // override at save time — flag it manual so reopening the invoice doesn't silently overwrite it.
+    const rateChk = Number(inv.exRate) || 0;
+    const flagIfManual = (field, currency, savedVal, expected) => {
+      const el = document.getElementById('f_' + field + '_' + currency);
+      if (savedVal && Math.abs(round2(savedVal) - round2(expected)) > 0.005) {
+        el.dataset.manual = '1';
+        document.getElementById('edit_' + field + '_' + currency).classList.add('hidden');
+      }
+    };
+    if (rateChk > 0) {
+      flagIfManual('total', 'inr', inv.totalInr, (Number(inv.totalUsd) || 0) * rateChk);
+      flagIfManual('advance', 'inr', inv.advanceInr, (Number(inv.advanceUsd) || 0) * rateChk);
+    }
+    flagIfManual('balance', 'usd', inv.balanceUsd, Math.max((Number(inv.totalUsd) || 0) - (Number(inv.advanceUsd) || 0), 0));
+    flagIfManual('balance', 'inr', inv.balanceInr !== undefined ? inv.balanceInr : inv.balance, Math.max((Number(inv.totalInr) || 0) - (Number(inv.advanceInr) || 0), 0));
     document.getElementById('f_remitType').value = inv.remitType || 'direct';
     document.getElementById('f_remitThirdParty').value = inv.remitThirdParty || '';
     document.getElementById('f_remitCompletedDate').value = inv.remitCompletedDate || '';
