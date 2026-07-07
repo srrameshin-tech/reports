@@ -874,6 +874,13 @@ function checkPackageDuplicate() {
   }
 }
 function saveInvoice() {
+  try {
+    saveInvoiceInner();
+  } catch (err) {
+    alert('⚠️ Save failed with an error:\n\n' + (err && err.message ? err.message : err) + '\n\nPlease screenshot this and send it.');
+  }
+}
+function saveInvoiceInner() {
   const invNo = document.getElementById('f_invno').value.trim();
   const supplier = document.getElementById('f_supplier').value.trim();
   const customer = document.getElementById('f_customer').value.trim();
@@ -965,6 +972,8 @@ function saveInvoice() {
         closeInvoiceModal();
       }).catch(err => toast('Error: ' + err.message));
     }
+  }).catch(err => {
+    alert('⚠️ Save failed with an error:\n\n' + (err && err.message ? err.message : err) + '\n\nPlease screenshot this and send it.');
   });
 }
 function deleteInvoice(id) {
