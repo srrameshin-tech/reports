@@ -874,13 +874,39 @@ function checkPackageDuplicate() {
   }
 }
 function saveInvoice() {
-  try {
-    saveInvoiceInner();
-  } catch (err) {
-    alert('⚠️ Save failed with an error:\n\n' + (err && err.message ? err.message : err) + '\n\nPlease screenshot this and send it.');
-  }
+  Promise.resolve().then(() => saveInvoiceInner()).catch(err => {
+    customAlert('⚠️ Save failed with an error:\n\n' + (err && err.message ? err.message : err) + '\n\nPlease screenshot this and send it.');
+  });
 }
-function saveInvoiceInner() {
+function customAlert(message) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:20px;max-width:340px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.3);">
+      <div style="white-space:pre-wrap;font-size:14px;color:#222;margin-bottom:18px;line-height:1.4;">${escapeHtml(message)}</div>
+      <button id="caOkBtn" style="width:100%;padding:10px;border-radius:8px;border:none;background:var(--ink);color:#fff;font-weight:700;">OK</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#caOkBtn').onclick = () => overlay.remove();
+}
+function customConfirm(message) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:14px;padding:20px;max-width:340px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.3);">
+        <div style="white-space:pre-wrap;font-size:14px;color:#222;margin-bottom:18px;line-height:1.4;">${escapeHtml(message)}</div>
+        <div style="display:flex;gap:10px;">
+          <button id="ccCancelBtn" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #999;background:#f3f3f3;font-weight:700;">Cancel</button>
+          <button id="ccOkBtn" style="flex:1;padding:10px;border-radius:8px;border:none;background:#c81e1e;color:#fff;font-weight:700;">Save anyway</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#ccCancelBtn').onclick = () => { overlay.remove(); resolve(false); };
+    overlay.querySelector('#ccOkBtn').onclick = () => { overlay.remove(); resolve(true); };
+  });
+}
+async function saveInvoiceInner() {
   const invNo = document.getElementById('f_invno').value.trim();
   const supplier = document.getElementById('f_supplier').value.trim();
   const customer = document.getElementById('f_customer').value.trim();
@@ -902,7 +928,7 @@ function saveInvoiceInner() {
     const msgs = [];
     if (invNoDups.length > 0) msgs.push(`Invoice No "${invNo}" already exists (${invNoDups.length} match${invNoDups.length > 1 ? 'es' : ''}).`);
     if (pkgDups.length > 0) msgs.push(`This Package Details already exists in another invoice (${pkgDups.map(([id, inv]) => inv.invNo || '-').join(', ')}).`);
-    const proceed = confirm('⚠️ Possible duplicate entry:\n\n' + msgs.join('\n') + '\n\nDo you want to save anyway?');
+    const proceed = await customConfirm('⚠️ Possible duplicate entry:\n\n' + msgs.join('\n') + '\n\nDo you want to save anyway?');
     if (!proceed) return;
   }
   const data = {
@@ -958,7 +984,7 @@ function saveInvoiceInner() {
     data.docName = null;
 
     if (uploadErrors.length) {
-      alert('Some documents failed to upload:\n\n' + uploadErrors.join('\n') + '\n\nThe invoice will still be saved with the documents that did upload successfully. Please try attaching the failed one again by editing this invoice.');
+      customAlert('Some documents failed to upload:\n\n' + uploadErrors.join('\n') + '\n\nThe invoice will still be saved with the documents that did upload successfully. Please try attaching the failed one again by editing this invoice.');
     }
     if (editingInvoiceId) {
       db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + editingInvoiceId).update(data).then(() => {
@@ -973,7 +999,7 @@ function saveInvoiceInner() {
       }).catch(err => toast('Error: ' + err.message));
     }
   }).catch(err => {
-    alert('⚠️ Save failed with an error:\n\n' + (err && err.message ? err.message : err) + '\n\nPlease screenshot this and send it.');
+    customAlert('⚠️ Save failed with an error:\n\n' + (err && err.message ? err.message : err) + '\n\nPlease screenshot this and send it.');
   });
 }
 function deleteInvoice(id) {
