@@ -914,12 +914,18 @@ async function saveInvoiceInner() {
   const referredBy = document.getElementById('f_referredBy').value.trim();
   const remitType = document.getElementById('f_remitType').value;
   const remitThirdParty = document.getElementById('f_remitThirdParty').value.trim();
-  if (!invNo || !supplier || !customer || !pkg || !referredBy) {
-    toast('⚠️ Please fill Invoice No, Supplier, Customer, Package, and Order Referred By');
+  const missing = [];
+  if (!invNo) missing.push('Invoice No');
+  if (!supplier) missing.push('Supplier');
+  if (!customer) missing.push('Customer');
+  if (!pkg) missing.push('Package Details');
+  if (!referredBy) missing.push('Order Referred By');
+  if (missing.length) {
+    customAlert('⚠️ Please fill in the following before saving:\n\n• ' + missing.join('\n• '));
     return;
   }
   if (remitType === '3rdparty' && !remitThirdParty) {
-    toast('⚠️ Please enter 3rd Party Name');
+    customAlert('⚠️ Please enter 3rd Party Name');
     return;
   }
   const invNoDups = findDuplicates('invNo', invNo);
