@@ -137,6 +137,20 @@ function handlePinKey(k) {
     setTimeout(verifyPin, 150);
   }
 }
+function digitFromKeyEvent(e){
+  if (e.code && /^Digit[0-9]$/.test(e.code)) return e.code.slice(5);
+  if (e.code && /^Numpad[0-9]$/.test(e.code)) return e.code.slice(6);
+  if (e.key >= '0' && e.key <= '9') return e.key;
+  return null;
+}
+document.addEventListener('keydown', (e) => {
+  const pad = document.getElementById('pinPad');
+  const loginScreen = document.getElementById('loginScreen');
+  if (!pad || !loginScreen || loginScreen.classList.contains('hidden')) return;
+  const d = digitFromKeyEvent(e);
+  if (d !== null) handlePinKey(d);
+  else if (e.key === 'Backspace' || e.code === 'Backspace') handlePinKey('⌫');
+});
 function verifyPin() {
   if (!pendingLoginUser) return;
   if (enteredPin === pendingLoginUser.pin) {
