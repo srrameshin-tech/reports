@@ -112,7 +112,19 @@ function renderPinPad() {
     const btn = document.createElement('button');
     btn.className = 'pin-key' + (k === '' ? ' empty' : '');
     btn.textContent = k;
-    if (k !== '') btn.onclick = () => handlePinKey(k);
+    if (k !== '') {
+      let touched = false;
+      btn.addEventListener('touchend', (e) => {
+        touched = true;
+        e.preventDefault();
+        handlePinKey(k);
+        setTimeout(() => { touched = false; }, 400);
+      });
+      btn.addEventListener('click', () => {
+        if (touched) return;
+        handlePinKey(k);
+      });
+    }
     pad.appendChild(btn);
   });
 }
