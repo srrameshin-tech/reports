@@ -50,7 +50,7 @@
   .pin-dot { width:14px; height:14px; border-radius:3px; border:2px solid rgba(255,255,255,.5); background:transparent; transform:rotate(45deg); transition:.15s; }
   .pin-dot.filled { background:var(--paper); border-color:var(--paper); box-shadow:0 0 0 4px rgba(255,200,0,.28); }
   .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-  .pin-key { font-family:'IBM Plex Mono',monospace; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.14); color:#fff; font-size:19px; font-weight:600; padding:16px 0; border-radius:10px; }
+  .pin-key { font-family:'IBM Plex Mono',monospace; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.14); color:#fff; font-size:19px; font-weight:600; padding:16px 0; border-radius:10px; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
   .pin-key:active { background:var(--paper); border-color:var(--paper); color:var(--ink); }
   .pin-key.empty { background:transparent; border:none; }
   #loginErr { color:#ff8a7a; font-size:13px; text-align:center; margin-top:10px; height:16px; font-weight:600; }
