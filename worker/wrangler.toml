@@ -1,0 +1,7 @@
+name = "reports-invoices-worker"
+main = "worker.js"
+compatibility_date = "2026-08-11"
+
+[[r2_buckets]]
+binding = "REPORTS_BUCKET"
+bucket_name = "reports-invoices"
