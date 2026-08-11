@@ -93,13 +93,10 @@ setTimeout(runAutoCheckDigest, 2500);
 
 const ROOT = "importReports";
 const DOC_WORKER_URL = "https://reports-invoices-worker.srrameshin.workers.dev";
-const DOC_AUTH_SECRET = "reports-secret-2026";
 
 /* ====================== STATE ====================== */
 let currentUser = null;       // {id, name}
-let pendingLoginUser = null;  // user being PIN-verified
-let enteredPin = "";
-let usersCache = {};          // {uid: {name, pin}}
+let usersCache = {};          // {uid: {name}}
 let companiesCache = {};      // {cid: {name}}
 let companyInvoiceCounts = {}; // {cid: count}
 let currentCompanyId = null;
@@ -172,164 +169,170 @@ function initials(name) {
 }
 
 /* ====================== LOGIN FLOW ====================== */
-const pinPadKeys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
 
-function renderPinPad() {
-  const pad = document.getElementById('pinPad');
-  pad.innerHTML = '';
-  pinPadKeys.forEach(k => {
-    const btn = document.createElement('button');
-    btn.className = 'pin-key' + (k === '' ? ' empty' : '');
-    btn.textContent = k;
-    if (k !== '') {
-      let touched = false;
-      btn.addEventListener('touchend', (e) => {
-        touched = true;
-        e.preventDefault();
-        handlePinKey(k);
-        setTimeout(() => { touched = false; }, 400);
-      });
-      btn.addEventListener('click', () => {
-        if (touched) return;
-        handlePinKey(k);
-      });
-    }
-    pad.appendChild(btn);
-  });
-}
-function renderPinDots() {
-  const wrap = document.getElementById('pinDisplay');
-  wrap.innerHTML = '';
-  for (let i = 0; i < 4; i++) {
-    const dot = document.createElement('div');
-    dot.className = 'pin-dot' + (i < enteredPin.length ? ' filled' : '');
-    wrap.appendChild(dot);
-  }
-}
-function handlePinKey(k) {
-  document.getElementById('loginErr').textContent = '';
-  if (k === '⌫') {
-    enteredPin = enteredPin.slice(0, -1);
-  } else if (enteredPin.length < 4) {
-    enteredPin += k;
-  }
-  renderPinDots();
-  if (enteredPin.length === 4) {
-    setTimeout(verifyPin, 150);
-  }
-}
-function digitFromKeyEvent(e){
-  if (e.code && /^Digit[0-9]$/.test(e.code)) return e.code.slice(5);
-  if (e.code && /^Numpad[0-9]$/.test(e.code)) return e.code.slice(6);
-  if (e.key >= '0' && e.key <= '9') return e.key;
-  return null;
-}
-document.addEventListener('keydown', (e) => {
-  const pad = document.getElementById('pinPad');
-  const loginScreen = document.getElementById('loginScreen');
-  if (!pad || !loginScreen || loginScreen.classList.contains('hidden')) return;
-  const d = digitFromKeyEvent(e);
-  if (d !== null) handlePinKey(d);
-  else if (e.key === 'Backspace' || e.code === 'Backspace') handlePinKey('⌫');
-});
-function verifyPin() {
-  if (!pendingLoginUser) return;
-  if (enteredPin === pendingLoginUser.pin) {
-    currentUser = { id: pendingLoginUser.id, name: pendingLoginUser.name };
-    sessionStorage_set();
-    doFirebaseSignInAndEnterApp();
-  } else {
-    document.getElementById('loginErr').textContent = 'Wrong PIN, please try again';
-    enteredPin = '';
-    renderPinDots();
-  }
-}
-function sessionStorage_set() {
-  try { window.__currentUserMem = currentUser; } catch(e) {}
-}
-function renderUserList() {
-  const wrap = document.getElementById('userListWrap');
-  const loading = document.getElementById('userListLoading');
-  wrap.innerHTML = '';
-  const ids = Object.keys(usersCache);
-  if (ids.length === 0) {
-    loading.textContent = 'No users found. Please create a user in Firebase first.';
-    return;
-  }
-  loading.classList.add('hidden');
-  ids.forEach(uid => {
-    const u = usersCache[uid];
-    const card = document.createElement('button');
-    card.className = 'user-card';
-    card.style.width = '100%';
-    card.style.border = 'none';
-    card.innerHTML = `<span class="av">${initials(u.name)}</span><span style="flex:1;text-align:left;">${u.name}</span><span class="company-card-arrow">\u203a</span>`;
-    card.onclick = () => {
-      pendingLoginUser = { id: uid, name: u.name, pin: u.pin };
-      enteredPin = '';
-      document.getElementById('pinEntryName').textContent = '👋 ' + u.name;
-      document.getElementById('userSelectBox').classList.add('hidden');
-      document.getElementById('pinEntryBox').classList.remove('hidden');
-      renderPinDots();
-    };
-    wrap.appendChild(card);
-  });
-}
-function backToUserSelect() {
-  document.getElementById('pinEntryBox').classList.add('hidden');
-  document.getElementById('userSelectBox').classList.remove('hidden');
-  enteredPin = '';
-  pendingLoginUser = null;
-  document.getElementById('loginErr').textContent = '';
+/* ====================== ACCOUNTS ======================
+   Anyone may register, but registering only creates a pending record. Until
+   an admin approves it the account can read nothing but its own membership
+   row, which is what the database rules and the Worker both enforce. That
+   keeps the sign-up form open without opening the invoices with it. */
+
+const MEMBERS = ROOT + '/members';
+
+let currentMember = null;   // {uid, name, email, approved, role}
+
+function loginErr(msg) {
+  const el = document.getElementById('loginErr');
+  if (el) el.textContent = msg || '';
 }
 
-function loadUsersForLogin() {
-  db.ref(ROOT + '/users').once('value').then(snap => {
-    usersCache = snap.val() || {};
-    if (Object.keys(usersCache).length === 0) {
-      // bootstrap default users on very first run (no auth yet, so this only
-      // works if rules allow it pre-auth... they don't, so instead we sign in
-      // anonymously first, then seed if empty)
-      anonAuthThenBootstrap();
-    } else {
-      renderUserList();
-    }
-  }).catch(() => {
-    // Not authed yet — sign in anonymously first to read users (rules require auth)
-    anonAuthThenBootstrap();
+function setAuthMode(mode) {
+  const signup = mode === 'signup';
+  document.getElementById('tabSignIn').classList.toggle('active', !signup);
+  document.getElementById('tabSignUp').classList.toggle('active', signup);
+  document.getElementById('nameField').classList.toggle('hidden', !signup);
+  document.getElementById('authBtn').textContent = signup ? 'Register' : 'Sign in';
+  loginErr('');
+}
+
+function authMode() {
+  return document.getElementById('tabSignUp').classList.contains('active') ? 'signup' : 'signin';
+}
+
+function setAuthBusy(busy) {
+  const btn = document.getElementById('authBtn');
+  if (!btn) return;
+  btn.disabled = busy;
+  if (busy) btn.textContent = 'Please wait\u2026';
+  else btn.textContent = authMode() === 'signup' ? 'Register' : 'Sign in';
+}
+
+function friendlyAuthError(err) {
+  const code = (err && err.code) || '';
+  if (code === 'auth/invalid-email') return 'That email does not look right';
+  if (code === 'auth/email-already-in-use') return 'That email already has an account. Try signing in.';
+  if (code === 'auth/weak-password') return 'Please choose a password of at least 8 characters';
+  if (code === 'auth/user-disabled') return 'This account has been turned off';
+  if (code === 'auth/network-request-failed') return 'No connection. Check your internet and try again';
+  if (code === 'auth/too-many-requests') return 'Too many tries. Please wait a moment';
+  // Firebase reports a wrong address and a wrong password identically so that
+  // a stranger cannot discover which addresses exist.
+  return 'Email or password is wrong';
+}
+
+function doAuth() {
+  if (authMode() === 'signup') doRegister(); else doSignIn();
+}
+
+function doSignIn() {
+  const email = (document.getElementById('loginEmail').value || '').trim();
+  const password = document.getElementById('loginPassword').value || '';
+  loginErr('');
+  if (!email || !password) { loginErr('Enter your email and password'); return; }
+  setAuthBusy(true);
+  auth.signInWithEmailAndPassword(email, password)
+    .catch(err => {
+      console.warn('[auth] sign-in failed', err && err.code);
+      loginErr(friendlyAuthError(err));
+    })
+    .then(() => setAuthBusy(false), () => setAuthBusy(false));
+}
+
+function doRegister() {
+  const email = (document.getElementById('loginEmail').value || '').trim();
+  const password = document.getElementById('loginPassword').value || '';
+  const name = (document.getElementById('signupName').value || '').trim();
+  loginErr('');
+  if (!email || !password || !name) { loginErr('Enter your name, email and password'); return; }
+  if (password.length < 8) { loginErr('Please choose a password of at least 8 characters'); return; }
+  setAuthBusy(true);
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(cred => {
+      // approved:false is the only shape the rules will accept from a new
+      // account, so a registration can never let itself in.
+      return db.ref(MEMBERS + '/' + cred.user.uid).set({
+        name: name,
+        email: email,
+        approved: false,
+        createdAt: Date.now()
+      });
+    })
+    .catch(err => {
+      console.warn('[auth] register failed', err && err.code);
+      loginErr(friendlyAuthError(err));
+    })
+    .then(() => setAuthBusy(false), () => setAuthBusy(false));
+}
+
+function doSignOut() {
+  auth.signOut().catch(e => console.warn('[auth] sign-out failed', e));
+}
+
+/* ---------- screens ---------- */
+
+function showOnly(id) {
+  ['loginScreen', 'pendingScreen', 'companyScreen', 'app'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.classList.toggle('hidden', s !== id);
   });
 }
-function anonAuthThenBootstrap() {
-  auth.signInAnonymously().then(() => {
-    db.ref(ROOT + '/users').once('value').then(snap => {
-      usersCache = snap.val() || {};
-      if (Object.keys(usersCache).length === 0) {
-        const seed = {
-          u1: { name: 'Ramesh', pin: '1234' },
-          u2: { name: 'User2', pin: '5678' }
-        };
-        db.ref(ROOT + '/users').set(seed).then(() => {
-          usersCache = seed;
-          renderUserList();
-        });
-      } else {
-        renderUserList();
+
+function showPendingScreen(member) {
+  const who = document.getElementById('pendingWho');
+  if (who) who.textContent = (member && member.name) ? member.name : '';
+  showOnly('pendingScreen');
+}
+
+/* ---------- session ---------- */
+
+function handleSignedIn(user) {
+  db.ref(MEMBERS + '/' + user.uid).once('value')
+    .then(snap => {
+      const m = snap.val();
+      if (!m) {
+        // An account with no membership row: created before this screen
+        // existed, or interrupted midway. Give it a pending row to sit in.
+        return db.ref(MEMBERS + '/' + user.uid).set({
+          name: user.displayName || (user.email || '').split('@')[0] || 'User',
+          email: user.email || '',
+          approved: false,
+          createdAt: Date.now()
+        }).then(() => null);
       }
+      return m;
+    })
+    .then(m => {
+      if (!m || m.approved !== true) {
+        currentUser = null;
+        currentMember = m;
+        showPendingScreen(m);
+        return;
+      }
+      currentMember = Object.assign({ uid: user.uid }, m);
+      currentUser = { id: user.uid, name: m.name };
+      document.getElementById('loginPassword').value = '';
+      showCompanySelect();
+    })
+    .catch(err => {
+      console.warn('[members] lookup failed', err);
+      loginErr('Could not check your account just now. Please try again.');
+      showOnly('loginScreen');
     });
-  }).catch(err => {
-    document.getElementById('userListLoading').textContent = 'Connection error: ' + err.message;
-  });
 }
 
-function doFirebaseSignInAndEnterApp() {
-  if (auth.currentUser) {
-    showCompanySelect();
-  } else {
-    auth.signInAnonymously().then(showCompanySelect).catch(err => {
-      toast('Login error: ' + err.message);
-    });
-  }
+function isAdminMember() {
+  return !!(currentMember && currentMember.approved === true && currentMember.role === 'admin');
 }
+
+auth.onAuthStateChanged(user => {
+  if (user && !user.isAnonymous) {
+    handleSignedIn(user);
+  } else {
+    currentUser = null;
+    currentMember = null;
+    lockApp();
+  }
+});
+
 
 function showCompanySelect() {
   document.getElementById('loginScreen').classList.add('hidden');
@@ -418,19 +421,12 @@ function enterApp() {
 
 function lockApp() {
   currentUser = null;
-  pendingLoginUser = null;
-  enteredPin = '';
   if (currentCompanyId) {
     db.ref(ROOT + '/invoices/' + currentCompanyId).off();
   }
   currentCompanyId = null;
   currentCompanyName = '';
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('companyScreen').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('pinEntryBox').classList.add('hidden');
-  document.getElementById('userSelectBox').classList.remove('hidden');
-  renderUserList();
+  showOnly('loginScreen');
 }
 
 /* ====================== TABS ====================== */
@@ -595,8 +591,24 @@ function truncate(s, n) {
 
 /* ====================== ADD/EDIT INVOICE MODAL ====================== */
 /* ====================== DOCUMENT ATTACH (R2 via Worker) ====================== */
-function docAuthHeader() {
-  return { "Authorization": "Bearer " + DOC_AUTH_SECRET };
+// A fresh ID token per call. It expires by itself, which a secret compiled
+// into the page never did.
+function docAuthHeader(forceRefresh) {
+  const user = auth.currentUser;
+  if (!user) return Promise.reject(new Error('not signed in'));
+  return user.getIdToken(!!forceRefresh)
+    .then(token => ({ "Authorization": "Bearer " + token }));
+}
+
+// One quiet retry with a refreshed token: a token that expired mid-session is
+// the app's problem to solve, not something to put in front of the user.
+function docFetch(url, options) {
+  const opts = options || {};
+  const attempt = fresh => docAuthHeader(fresh).then(authHdr =>
+    fetch(url, Object.assign({}, opts, {
+      headers: Object.assign({}, opts.headers || {}, authHdr)
+    })));
+  return attempt(false).then(resp => (resp.status === 401 ? attempt(true) : resp));
 }
 
 function onDocFileSelected(event) {
@@ -706,7 +718,7 @@ function viewDocumentForInvoice(id, key) {
 
 function openDocByKey(key) {
   toast('📄 Loading document...');
-  fetch(DOC_WORKER_URL + '/file/' + encodeURIComponent(key), { headers: docAuthHeader() })
+  docFetch(DOC_WORKER_URL + '/file/' + encodeURIComponent(key))
     .then(resp => {
       if (!resp.ok) throw new Error('Document not found (status ' + resp.status + ')');
       return resp.blob();
@@ -719,9 +731,9 @@ function openDocByKey(key) {
 }
 
 function uploadPendingDoc(docKey, file) {
-  return fetch(DOC_WORKER_URL + '/upload/' + encodeURIComponent(docKey), {
+  return docFetch(DOC_WORKER_URL + '/upload/' + encodeURIComponent(docKey), {
     method: 'PUT',
-    headers: { ...docAuthHeader(), 'Content-Type': file.type || 'application/octet-stream' },
+    headers: { 'Content-Type': file.type || 'application/octet-stream' },
     body: file,
   }).then(resp => {
     if (!resp.ok) throw new Error('Upload failed (status ' + resp.status + ')');
@@ -730,9 +742,8 @@ function uploadPendingDoc(docKey, file) {
 }
 
 function deleteDocByKey(key) {
-  return fetch(DOC_WORKER_URL + '/file/' + encodeURIComponent(key), {
+  return docFetch(DOC_WORKER_URL + '/file/' + encodeURIComponent(key), {
     method: 'DELETE',
-    headers: docAuthHeader(),
   }).catch(() => {}); // best-effort; don't block save flow on cleanup failure
 }
 
@@ -1232,79 +1243,98 @@ function deleteCompany(cid, name) {
 
 /* ====================== SETTINGS: USERS ====================== */
 function renderSettingsUserList() {
-  db.ref(ROOT + '/users').once('value').then(snap => {
-    const users = snap.val() || {};
-    usersCache = users;
-    const wrap = document.getElementById('settingsUserList');
-    const ids = Object.keys(users);
+  const wrap = document.getElementById('settingsUserList');
+  if (!wrap) return;
+  if (!isAdminMember()) {
+    wrap.innerHTML = '<p style="font-size:12px;color:#888;">Only an admin can manage members.</p>';
+    return;
+  }
+  db.ref(MEMBERS).once('value').then(snap => {
+    const members = snap.val() || {};
+    usersCache = members;
+    const ids = Object.keys(members);
     if (ids.length === 0) {
-      wrap.innerHTML = '<p style="font-size:12px;color:#888;">No users found</p>';
+      wrap.innerHTML = '<p style="font-size:12px;color:#888;">No members yet</p>';
       return;
     }
+    // Anyone waiting on a decision belongs at the top, where it will be seen.
+    ids.sort((a, b) => (members[a].approved === true) - (members[b].approved === true));
     wrap.innerHTML = ids.map(uid => {
-      const u = users[uid];
+      const m = members[uid];
+      const pending = m.approved !== true;
+      const isMe = currentMember && currentMember.uid === uid;
+      const badge = pending
+        ? '<span style="font-size:11px;font-weight:700;color:#8a6d1d;background:#fdf3d8;border-radius:5px;padding:2px 7px;">Waiting</span>'
+        : (m.role === 'admin'
+            ? '<span style="font-size:11px;font-weight:700;color:#0c4f49;background:#e3efed;border-radius:5px;padding:2px 7px;">Admin</span>'
+            : '');
+      const buttons = [];
+      if (pending) {
+        buttons.push(btn(`approveMember('${uid}')`, 'Approve', '#0c4f49', '#e3efed'));
+      } else if (!isMe) {
+        buttons.push(m.role === 'admin'
+          ? btn(`setMemberRole('${uid}', false)`, 'Remove admin', '#8a6d1d', '#fdf3d8')
+          : btn(`setMemberRole('${uid}', true)`, 'Make admin', '#8a6d1d', '#fdf3d8'));
+      }
+      if (!isMe) buttons.push(btn(`removeMember('${uid}')`, pending ? 'Reject' : 'Remove', '#fff', '#a8362a', true));
       return `
         <div class="card" style="padding:12px 14px;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-            <span class="user-card av" style="width:32px;height:32px;background:#e0f2f1;color:#0f766e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">${initials(u.name)}</span>
-            <span style="font-size:14px;font-weight:600;">${escapeHtml(u.name)}</span>
+            <span class="user-card av" style="width:32px;height:32px;background:#e0f2f1;color:#0f766e;">${initials(m.name || '?')}</span>
+            <span style="flex:1;">
+              <span style="font-size:14px;font-weight:600;display:block;">${escapeHtml(m.name || 'Unnamed')}</span>
+              <span style="font-size:11px;color:#888;">${escapeHtml(m.email || '')}</span>
+            </span>
+            ${badge}
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button onclick="editUserName('${uid}','${escapeHtml(u.name)}')" style="flex:1;min-width:90px;border:1.5px solid #8a6d1d;background:#fdf3d8;color:#8a6d1d;border-radius:7px;padding:8px 10px;font-size:12px;font-weight:700;">Edit Name</button>
-            <button onclick="editUserPin('${uid}','${escapeHtml(u.name)}')" style="flex:1;min-width:90px;border:1.5px solid #0c4f49;background:#e3efed;color:#0c4f49;border-radius:7px;padding:8px 10px;font-size:12px;font-weight:700;">Change PIN</button>
-            <button onclick="deleteUser('${uid}')" style="flex:1;min-width:90px;border:1.5px solid #a8362a;color:#fff;background:#a8362a;border-radius:7px;padding:8px 10px;font-size:12px;font-weight:700;">Remove</button>
-          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">${buttons.join('')}</div>
         </div>`;
     }).join('');
+  }).catch(err => {
+    console.warn('[members] list failed', err);
+    wrap.innerHTML = '<p style="font-size:12px;color:#888;">Could not load members just now.</p>';
   });
 }
+
+function btn(onclick, label, color, bg, solid) {
+  return `<button onclick="${onclick}" style="flex:1;min-width:90px;border:1.5px solid ${solid ? bg : color};background:${bg};color:${color};border-radius:7px;padding:8px 10px;font-size:12px;font-weight:700;">${label}</button>`;
+}
+
+function approveMember(uid) {
+  db.ref(MEMBERS + '/' + uid).update({ approved: true, role: 'user' })
+    .then(() => { toast('\u2705 Member approved'); renderSettingsUserList(); })
+    .catch(err => {
+      console.warn('[members] approve failed', err);
+      toast('\u26a0\ufe0f Could not approve just now');
+    });
+}
+
+function setMemberRole(uid, makeAdmin) {
+  db.ref(MEMBERS + '/' + uid + '/role').set(makeAdmin ? 'admin' : 'user')
+    .then(() => { toast(makeAdmin ? '\u2705 Now an admin' : '\u2705 Admin removed'); renderSettingsUserList(); })
+    .catch(err => {
+      console.warn('[members] role change failed', err);
+      toast('\u26a0\ufe0f Could not change that just now');
+    });
+}
+
+function removeMember(uid) {
+  if (!confirm('Remove this member? They will lose access.')) return;
+  db.ref(MEMBERS + '/' + uid).remove()
+    .then(() => { toast('\ud83d\uddd1\ufe0f Member removed'); renderSettingsUserList(); })
+    .catch(err => {
+      console.warn('[members] remove failed', err);
+      toast('\u26a0\ufe0f Could not remove just now');
+    });
+}
+
 function editUserName(uid, name) {
   const newName = prompt('New name for ' + name + ':', name);
   if (newName === null) return;
   const trimmed = newName.trim();
-  if (!trimmed) { toast('⚠️ Please enter a valid name'); return; }
-  db.ref(ROOT + '/users/' + uid + '/name').set(trimmed).then(() => {
-    toast('✅ Name updated');
-    renderSettingsUserList();
-  });
-}
-function openAddUserModal() {
-  document.getElementById('au_name').value = '';
-  document.getElementById('au_pin').value = '';
-  document.getElementById('addUserModalOverlay').classList.remove('hidden');
-}
-function closeAddUserModal() {
-  document.getElementById('addUserModalOverlay').classList.add('hidden');
-}
-function saveNewUser() {
-  const name = document.getElementById('au_name').value.trim();
-  const pin = document.getElementById('au_pin').value.trim();
-  if (!name || !/^\d{4}$/.test(pin)) {
-    toast('⚠️ Please enter a name and a valid 4-digit PIN');
-    return;
-  }
-  db.ref(ROOT + '/users').push({ name, pin }).then(() => {
-    toast('✅ User added');
-    closeAddUserModal();
-    renderSettingsUserList();
-  });
-}
-function editUserPin(uid, name) {
-  const newPin = prompt('New 4-digit PIN for ' + name + ':');
-  if (newPin === null) return;
-  if (!/^\d{4}$/.test(newPin)) { toast('⚠️ Please enter a 4-digit PIN'); return; }
-  db.ref(ROOT + '/users/' + uid + '/pin').set(newPin).then(() => {
-    toast('✅ PIN updated');
-  });
-}
-function deleteUser(uid) {
-  if (Object.keys(usersCache).length <= 1) {
-    toast('⚠️ Cannot remove the last user');
-    return;
-  }
-  if (!confirm('Remove this user?')) return;
-  db.ref(ROOT + '/users/' + uid).remove().then(() => {
-    toast('🗑️ User removed');
+  if (!trimmed) { toast('\u26a0\ufe0f Please enter a valid name'); return; }
+  db.ref(MEMBERS + '/' + uid + '/name').set(trimmed).then(() => {
+    toast('\u2705 Name updated');
     renderSettingsUserList();
   });
 }
@@ -1881,8 +1911,5 @@ function exportReportExcel() {
 
 /* ====================== INIT ====================== */
 document.addEventListener('DOMContentLoaded', () => {
-  renderPinPad();
-  renderPinDots();
-  loadUsersForLogin();
   document.getElementById('f_date').value = todayISO();
 });
