@@ -310,13 +310,32 @@ function handleSignedIn(user) {
       currentMember = Object.assign({ uid: user.uid }, m);
       currentUser = { id: user.uid, name: m.name };
       document.getElementById('loginPassword').value = '';
-      showCompanySelect();
+      // Somebody has to be able to approve the second person. If no admin
+      // exists yet, the first approved member becomes one; once one exists
+      // this door closes by itself.
+      claimFirstAdminIfNeeded().then(showCompanySelect, showCompanySelect);
     })
     .catch(err => {
       console.warn('[members] lookup failed', err);
       loginErr('Could not check your account just now. Please try again.');
       showOnly('loginScreen');
     });
+}
+
+function claimFirstAdminIfNeeded() {
+  if (!currentMember || currentMember.role === 'admin') return Promise.resolve();
+  return db.ref(MEMBERS).once('value').then(snap => {
+    const all = snap.val() || {};
+    const hasAdmin = Object.keys(all).some(uid => all[uid] && all[uid].role === 'admin');
+    if (hasAdmin) return;
+    return db.ref(MEMBERS + '/' + currentMember.uid + '/role').set('admin').then(() => {
+      currentMember.role = 'admin';
+      toast('\u2705 You are the admin for this app');
+    });
+  }).catch(err => {
+    // Not being able to check is not a reason to block a signed-in member.
+    console.warn('[members] first-admin check failed', err);
+  });
 }
 
 function isAdminMember() {
