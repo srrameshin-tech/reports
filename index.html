@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+  <meta name="app-build" content="20260811-1152">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Import Reports</title>
 <link rel="manifest" href="manifest.json">
@@ -38,7 +39,7 @@
   #loginScreen { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--paper); color:var(--ink); padding:24px; position:relative; overflow:hidden; }
   #loginScreen::before { content:''; position:absolute; top:-20%; right:-30%; width:80%; height:60%; background:var(--ink); clip-path:polygon(30% 0, 100% 0, 100% 100%, 0 60%); z-index:0; }
   #loginScreen > * { position:relative; z-index:1; }
-  #loginScreen h1, #companyScreen h1 { font-family:'Space Grotesk',sans-serif; font-size:27px; font-weight:700; margin-bottom:10px; letter-spacing:-0.02em; display:flex; align-items:center; gap:10px; color:var(--ink); -webkit-text-stroke:0; text-shadow:none; }
+  #loginScreen h1, #companyScreen h1, #pendingScreen h1 { font-family:'Space Grotesk',sans-serif; font-size:27px; font-weight:700; margin-bottom:10px; letter-spacing:-0.02em; display:flex; align-items:center; gap:10px; color:var(--ink); -webkit-text-stroke:0; text-shadow:none; }
   .title-accent { color:var(--paper); background:var(--ink); padding:2px 10px; border-radius:8px; display:inline-block; }
   #loginScreen h1::before { content:''; width:8px; height:28px; background:var(--ink); border-radius:2px; display:inline-block; }
   .live-dot { width:14px; height:14px; border-radius:50%; background:#22c55e; display:inline-block; flex-shrink:0; box-shadow:0 0 0 2px rgba(13,13,13,.85), 0 0 10px rgba(34,197,94,.9); animation:live-blink 1.1s ease-in-out infinite; }
@@ -59,9 +60,12 @@
   .user-card .av { font-family:'Space Grotesk',sans-serif; width:44px; height:44px; border-radius:50%; background:var(--paper); color:var(--ink); display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; font-size:15px; box-shadow:0 0 0 3px rgba(255,255,255,.1); border:2px solid #c81e1e; }
 
   /* ---------- COMPANY SELECT ---------- */
-  #companyScreen { min-height:100vh; background:var(--paper); color:var(--ink); padding:24px; position:relative; overflow:hidden; }
-  #companyScreen::before { content:''; position:absolute; top:-20%; right:-30%; width:80%; height:50%; background:var(--ink); clip-path:polygon(30% 0, 100% 0, 100% 100%, 0 60%); z-index:0; }
-  #companyScreen > * { position:relative; z-index:1; }
+  .auth-tabs { display:flex; border:1px solid rgba(255,255,255,.25); border-radius:10px; overflow:hidden; margin-bottom:16px; }
+  .auth-tab { flex:1; padding:12px; background:transparent; color:rgba(255,255,255,.7); border:none; font-size:15px; font-weight:700; }
+  .auth-tab.active { background:var(--cargo,#a8362a); color:#fff; }
+  #companyScreen, #pendingScreen { min-height:100vh; background:var(--paper); color:var(--ink); padding:24px; position:relative; overflow:hidden; }
+  #companyScreen::before, #pendingScreen::before { content:''; position:absolute; top:-20%; right:-30%; width:80%; height:50%; background:var(--ink); clip-path:polygon(30% 0, 100% 0, 100% 100%, 0 60%); z-index:0; }
+  #companyScreen > *, #pendingScreen > * { position:relative; z-index:1; }
   .company-select-wrap { min-height:calc(100vh - 48px); display:flex; flex-direction:column; align-items:center; justify-content:center; }
   .company-card { background:var(--ink); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:15px 16px; display:flex; align-items:center; gap:13px; color:#fff; width:100%; transition:.15s; }
   .company-card:active { background:#000; border-color:rgba(255,255,255,.2); }
@@ -176,20 +180,40 @@
   <h1>📦 Import <span class="title-accent">Reports</span></h1>
   <div class="live-badge"><span class="live-dot" title="Live"></span><span class="live-label">LIVE</span></div>
 
-  <!-- STEP 1: choose user -->
-  <div class="pin-box" id="userSelectBox">
-    <div id="userListWrap" style="display:flex;flex-direction:column;gap:10px;margin-bottom:6px;"></div>
-    <div id="userListLoading" style="text-align:center;opacity:.8;font-size:13px;padding:10px;">Loading users...</div>
-  </div>
-
-  <!-- STEP 2: enter PIN -->
-  <div class="pin-box hidden" id="pinEntryBox">
-    <div style="text-align:center;margin-bottom:10px;font-size:15px;color:#fff;" id="pinEntryName"></div>
-    <div class="pin-display" id="pinDisplay"></div>
-    <div class="pin-pad" id="pinPad"></div>
+  <div class="pin-box" id="signInBox">
+    <div class="auth-tabs">
+      <button id="tabSignIn" class="auth-tab active" onclick="setAuthMode('signin')">Sign In</button>
+      <button id="tabSignUp" class="auth-tab" onclick="setAuthMode('signup')">Sign Up</button>
+    </div>
+    <div class="field" style="margin-bottom:12px;">
+      <label style="color:#fff;font-size:13px;">Email</label>
+      <input type="email" id="loginEmail" autocomplete="username" inputmode="email"
+             placeholder="you@example.com"
+             style="width:100%;padding:13px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.09);color:#fff;font-size:16px;">
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label style="color:#fff;font-size:13px;">Password</label>
+      <input type="password" id="loginPassword" autocomplete="current-password"
+             placeholder="Password"
+             onkeydown="if(event.key==='Enter')doAuth()"
+             style="width:100%;padding:13px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.09);color:#fff;font-size:16px;">
+    </div>
+    <div class="field hidden" id="nameField" style="margin-bottom:14px;">
+      <label style="color:#fff;font-size:13px;">Your name</label>
+      <input type="text" id="signupName" autocomplete="name" placeholder="e.g. Ramesh"
+             style="width:100%;padding:13px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.09);color:#fff;font-size:16px;">
+    </div>
+    <button class="btn-primary" id="authBtn" style="width:100%;" onclick="doAuth()">Sign in</button>
     <div id="loginErr"></div>
-    <button class="btn-secondary" style="margin-top:14px;" onclick="backToUserSelect()">⬅ Back</button>
   </div>
+</div>
+
+<!-- WAITING FOR APPROVAL -->
+<div id="pendingScreen" class="hidden">
+  <h1>⏳ Almost <span class="title-accent">there</span></h1>
+  <p style="font-size:14px;line-height:1.6;margin-bottom:6px;">Thanks for registering<span id="pendingWho2"></span>. An admin needs to approve your account before you can see the reports.</p>
+  <p style="font-size:13px;opacity:.7;margin-bottom:18px;">Signed in as <strong id="pendingWho"></strong>. You can close this and come back later.</p>
+  <button class="btn-secondary" onclick="doSignOut()">Sign out</button>
 </div>
 
 <!-- COMPANY SELECT -->
@@ -286,7 +310,6 @@
 
       <h3 style="margin:22px 0 10px;color:#0f766e;">👥 Users</h3>
       <div id="settingsUserList"></div>
-      <button class="btn-secondary" style="border:2px solid var(--cargo);color:var(--cargo);" onclick="openAddUserModal()">+ Add User</button>
 
       <h3 style="margin:22px 0 10px;color:#0f766e;">💾 Data Backup</h3>
       <div class="report-btn" style="cursor:pointer;background:#0f766e;border-color:#0f766e;" onclick="exportJSONBackup()">
@@ -314,24 +337,6 @@
     </div>
     <button class="btn-primary" onclick="saveCompany()">Save Company</button>
     <button class="btn-secondary" onclick="closeCompanyModal()">Cancel</button>
-  </div>
-</div>
-
-<!-- ADD USER MODAL -->
-<div id="addUserModalOverlay" class="modal-overlay hidden">
-  <div class="modal-sheet">
-    <button class="close-x" onclick="closeAddUserModal()">✕</button>
-    <h3>Add New User</h3>
-    <div class="field">
-      <label>Name *</label>
-      <input type="text" id="au_name" placeholder="e.g. Ramesh">
-    </div>
-    <div class="field">
-      <label>4-digit PIN *</label>
-      <input type="number" id="au_pin" placeholder="1234" maxlength="4" inputmode="numeric">
-    </div>
-    <button class="btn-primary" onclick="saveNewUser()">Save User</button>
-    <button class="btn-secondary" onclick="closeAddUserModal()">Cancel</button>
   </div>
 </div>
 
