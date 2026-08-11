@@ -12,6 +12,8 @@
  * token cannot be forged, expires within the hour, and never appears in the
  * source.
  *
+ * Deployed from GitHub via Workers Builds.
+ *
  * Routes (unchanged, so the app keeps working the same way):
  *   PUT    /upload/<key>   upload
  *   GET    /file/<key>     download
