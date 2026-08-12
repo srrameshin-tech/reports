@@ -23,12 +23,12 @@ BACKUP_EMAIL = os.environ["BACKUP_EMAIL"]
 BACKUP_PASSWORD = os.environ["BACKUP_PASSWORD"]
 
 
-def sign_in():
+def _auth_call(endpoint):
     url = (
-        "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword"
+        f"https://identitytoolkit.googleapis.com/v1/accounts:{endpoint}"
         f"?key={FIREBASE_API_KEY}"
     )
-    resp = requests.post(
+    return requests.post(
         url,
         json={
             "email": BACKUP_EMAIL,
@@ -37,11 +37,43 @@ def sign_in():
         },
         timeout=30,
     )
-    if resp.status_code != 200:
-        print("Firebase sign-in failed. Response body:")
-        print(resp.text)
-    resp.raise_for_status()
-    return resp.json()["idToken"]
+
+
+def _reason(resp):
+    try:
+        return resp.json().get("error", {}).get("message", "unknown")
+    except ValueError:
+        return "unknown"
+
+
+def sign_in():
+    """Sign the backup bot in, creating its account on the very first run.
+
+    This used to sign in as Ramesh. That tied the weekly backup to a password
+    a person changes from time to time, and when it changed the backup simply
+    stopped — quietly, for weeks. The bot now has an account of its own, so
+    nothing a person does to their own login can break it.
+    """
+    resp = _auth_call("signInWithPassword")
+    if resp.status_code == 200:
+        return resp.json()["idToken"]
+
+    print(f"Sign-in did not succeed ({_reason(resp)}). Trying to create the backup account.")
+    resp = _auth_call("signUp")
+    if resp.status_code == 200:
+        print("Backup account created.")
+        return resp.json()["idToken"]
+
+    reason = _reason(resp)
+    if reason == "EMAIL_EXISTS":
+        raise SystemExit(
+            "The backup account exists but the password does not match. "
+            "Update the BACKUP_PASSWORD secret, or delete the account in "
+            "Firebase Authentication and run this again to recreate it."
+        )
+    print("Firebase auth failed. Response body:")
+    print(resp.text)
+    raise SystemExit(f"Could not sign in or sign up: {reason}")
 
 
 def fetch_data(id_token):
