@@ -180,9 +180,11 @@ const MEMBERS = ROOT + '/members';
 
 let currentMember = null;   // {uid, name, email, approved, role}
 
-function loginErr(msg) {
+function loginErr(msg, good) {
   const el = document.getElementById('loginErr');
-  if (el) el.textContent = msg || '';
+  if (!el) return;
+  el.textContent = msg || '';
+  el.classList.toggle('ok', !!good);
 }
 
 function setAuthMode(mode) {
@@ -191,6 +193,8 @@ function setAuthMode(mode) {
   document.getElementById('tabSignUp').classList.toggle('active', signup);
   document.getElementById('nameField').classList.toggle('hidden', !signup);
   document.getElementById('authBtn').textContent = signup ? 'Register' : 'Sign in';
+  const forgot = document.getElementById('forgotBtn');
+  if (forgot) forgot.style.display = signup ? 'none' : 'block';
   loginErr('');
 }
 
@@ -221,6 +225,36 @@ function friendlyAuthError(err) {
 
 function doAuth() {
   if (authMode() === 'signup') doRegister(); else doSignIn();
+}
+
+// Without this there was no way back in at all: a forgotten password meant
+// opening the Firebase console on a phone to send the mail by hand.
+function doResetPassword() {
+  const email = (document.getElementById('loginEmail').value || '').trim();
+  if (!email) { loginErr('Type your email first, then tap this'); return; }
+
+  const btn = document.getElementById('forgotBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending\u2026'; }
+  loginErr('');
+
+  auth.sendPasswordResetEmail(email)
+    .then(() => {
+      // Deliberately vague: confirming which addresses are registered would
+      // hand a stranger a way to probe for accounts.
+      loginErr('If that email has an account, a reset link is on its way. Check the inbox and spam.', true);
+    })
+    .catch(err => {
+      console.warn('[auth] reset failed', err && err.code);
+      if (err && err.code === 'auth/invalid-email') loginErr('That email does not look right');
+      else if (err && err.code === 'auth/too-many-requests') loginErr('Too many tries. Please wait a moment');
+      else if (err && err.code === 'auth/network-request-failed') loginErr('No connection. Check your internet and try again');
+      else loginErr('Could not send the link just now. Try again in a moment');
+    })
+    .then(() => {
+      if (btn) { btn.disabled = false; btn.textContent = 'Forgot password'; }
+    }, () => {
+      if (btn) { btn.disabled = false; btn.textContent = 'Forgot password'; }
+    });
 }
 
 function doSignIn() {
