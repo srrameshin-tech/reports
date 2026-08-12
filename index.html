@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="app-build" content="20260811-1152">
+  <meta name="app-build" content="20260812-1345">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Import Reports</title>
 <link rel="manifest" href="manifest.json">
@@ -54,7 +54,8 @@
   .pin-key { font-family:'IBM Plex Mono',monospace; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.14); color:#fff; font-size:19px; font-weight:600; padding:16px 0; border-radius:10px; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
   .pin-key:active { background:var(--paper); border-color:var(--paper); color:var(--ink); }
   .pin-key.empty { background:transparent; border:none; }
-  #loginErr { color:#ff8a7a; font-size:13px; text-align:center; margin-top:10px; height:16px; font-weight:600; }
+  #loginErr { color:#ff8a7a; font-size:13px; text-align:center; margin-top:10px; min-height:16px; font-weight:600; line-height:1.4; }
+  #loginErr.ok { color:#7BE0A6; }
   .user-card { background:var(--ink); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:15px 16px; display:flex; align-items:center; gap:13px; color:#fff; font-size:15px; font-weight:600; transition:.15s; font-family:'Space Grotesk',sans-serif; }
   .user-card:active { background:#000; }
   .user-card .av { font-family:'Space Grotesk',sans-serif; width:44px; height:44px; border-radius:50%; background:var(--paper); color:var(--ink); display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; font-size:15px; box-shadow:0 0 0 3px rgba(255,255,255,.1); border:2px solid #c81e1e; }
@@ -205,6 +206,8 @@
     </div>
     <button class="btn-primary" id="authBtn" style="width:100%;" onclick="doAuth()">Sign in</button>
     <div id="loginErr"></div>
+    <button id="forgotBtn" onclick="doResetPassword()"
+            style="width:100%;margin-top:8px;background:none;border:none;color:#FFD400;font-size:14px;font-weight:600;text-decoration:underline;padding:10px;">Forgot password</button>
   </div>
 </div>
 
