@@ -51,13 +51,38 @@ def fetch_data(id_token):
     return resp.json()
 
 
+# This repository is public, so anything committed here is readable by
+# anyone. The member list holds real email addresses and is not worth
+# restoring anyway: accounts live in Firebase Auth, and the first person to
+# sign up becomes the admin again.
+DO_NOT_BACK_UP = ("members", "users")
+
+
+def strip_personal(data):
+    if not isinstance(data, dict):
+        return data, []
+    dropped = [k for k in DO_NOT_BACK_UP if k in data]
+    for key in dropped:
+        del data[key]
+    return data, dropped
+
+
 def save_backup(data):
     os.makedirs("backups", exist_ok=True)
     today = datetime.date.today().isoformat()
     path = f"backups/reports-backup-{today}.json"
+
+    data, dropped = strip_personal(data)
+    if not data:
+        raise SystemExit("Nothing left to back up, refusing to write an empty file.")
+
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
     print(f"Backup saved: {path}")
+    print("Nodes backed up:", ", ".join(sorted(data)))
+    if dropped:
+        print("Left out on purpose:", ", ".join(dropped))
 
 
 def prune_old_backups():
