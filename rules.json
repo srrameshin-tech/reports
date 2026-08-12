@@ -1,38 +1,44 @@
 {
   "rules": {
-    ".read": false,
+    ".read": "auth != null && auth.token.email === 'reports-backup@sramesh.in'",
     ".write": false,
-
     "importReports": {
       ".read": "auth != null && root.child('importReports/members').child(auth.uid).child('approved').val() === true",
-
       "members": {
         "$uid": {
           ".read": "auth != null && (auth.uid === $uid || root.child('importReports/members').child(auth.uid).child('role').val() === 'admin')",
           ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.child('email').val() === auth.token.email && ((!root.child('importReports/members').exists() && newData.child('approved').val() === true && newData.child('role').val() === 'admin') || (root.child('importReports/members').exists() && newData.child('approved').val() === false && newData.child('role').val() === 'user'))) || root.child('importReports/members').child(auth.uid).child('role').val() === 'admin')",
           ".validate": "!newData.exists() || newData.hasChildren(['name', 'email', 'approved'])",
-          "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length < 60" },
-          "email": { ".validate": "newData.isString() && newData.val().length > 0" },
-          "approved": { ".validate": "newData.isBoolean()" },
-          "role": { ".validate": "newData.val() === 'admin' || newData.val() === 'user'" },
-          "createdAt": { ".validate": "newData.isNumber()" },
-          "$other": { ".validate": false }
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length < 60"
+          },
+          "email": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "approved": {
+            ".validate": "newData.isBoolean()"
+          },
+          "role": {
+            ".validate": "newData.val() === 'admin' || newData.val() === 'user'"
+          },
+          "createdAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       },
-
       "invoices": {
         ".write": "auth != null && root.child('importReports/members').child(auth.uid).child('approved').val() === true"
       },
-
       "companies": {
         ".write": "auth != null && root.child('importReports/members').child(auth.uid).child('approved').val() === true"
       },
-
       "users": {
         ".write": "auth != null && root.child('importReports/members').child(auth.uid).child('role').val() === 'admin'"
       }
     },
-
     "errorLogs": {
       ".read": "auth != null && root.child('importReports/members').child(auth.uid).child('role').val() === 'admin'",
       ".write": "auth != null"
