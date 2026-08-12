@@ -1,13 +1,9 @@
-/* ====================== GLOBAL ERROR CATCHER (diagnostic) ====================== */
+/* ====================== GLOBAL ERROR CATCHER ====================== */
+// Errors go to the console and to errorLogs, never onto the screen. The
+// handler further down records them; there is nothing useful a person can do
+// with a stack trace, and a full-screen panel over their work is alarming.
 window.addEventListener('error', function(e) {
-  try {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
-    overlay.innerHTML = '<div style="background:#fff;border-radius:14px;padding:20px;max-width:340px;width:100%;"><div style="font-size:13px;color:#a8362a;white-space:pre-wrap;margin-bottom:14px;">⚠️ JS Error caught:\n\n' +
-      (e.message || 'Unknown error') + '\n\nFile: ' + (e.filename ? e.filename.split('/').pop() : '?') + ':' + e.lineno +
-      '</div><button onclick="this.closest(\'div\').parentElement.remove()" style="width:100%;padding:10px;border-radius:8px;border:none;background:#111;color:#fff;font-weight:700;">OK</button></div>';
-    document.body.appendChild(overlay);
-  } catch (err) {}
+  console.error('[uncaught]', e.message, (e.filename || '') + ':' + (e.lineno || ''));
 });
 /* ====================== FIREBASE CONFIG ====================== */
 const firebaseConfig = {
@@ -210,6 +206,24 @@ function setAuthBusy(busy) {
   else btn.textContent = authMode() === 'signup' ? 'Register' : 'Sign in';
 }
 
+// Raw Firebase errors were reaching the screen. "permission_denied at
+// /importReports" means nothing to the person reading it, so map the handful
+// that actually happen and keep the real one in the console.
+function friendlyError(err) {
+  const raw = (err && (err.code || err.message) || '') + '';
+  console.warn('[error]', err);
+  if (/permission[_ ]denied|PERMISSION_DENIED/i.test(raw)) {
+    return 'You do not have access to that yet';
+  }
+  if (/network|offline|unavailable|Failed to fetch/i.test(raw)) {
+    return 'No connection. Check your internet and try again';
+  }
+  if (/quota|too many/i.test(raw)) {
+    return 'Too many tries. Please wait a moment';
+  }
+  return 'Something went wrong. Please try again';
+}
+
 function friendlyAuthError(err) {
   const code = (err && err.code) || '';
   if (code === 'auth/invalid-email') return 'That email does not look right';
@@ -283,12 +297,7 @@ function doRegister() {
     .then(cred => {
       // approved:false is the only shape the rules will accept from a new
       // account, so a registration can never let itself in.
-      return db.ref(MEMBERS + '/' + cred.user.uid).set({
-        name: name,
-        email: email,
-        approved: false,
-        createdAt: Date.now()
-      });
+      return claimMembership(cred.user, name, email);
     })
     .catch(err => {
       console.warn('[auth] register failed', err && err.code);
@@ -325,12 +334,11 @@ function handleSignedIn(user) {
       if (!m) {
         // An account with no membership row: created before this screen
         // existed, or interrupted midway. Give it a pending row to sit in.
-        return db.ref(MEMBERS + '/' + user.uid).set({
-          name: user.displayName || (user.email || '').split('@')[0] || 'User',
-          email: user.email || '',
-          approved: false,
-          createdAt: Date.now()
-        }).then(() => null);
+        return claimMembership(
+          user,
+          user.displayName || (user.email || '').split('@')[0] || 'User',
+          user.email || ''
+        ).then(() => null);
       }
       return m;
     })
@@ -356,20 +364,27 @@ function handleSignedIn(user) {
     });
 }
 
-function claimFirstAdminIfNeeded() {
-  if (!currentMember || currentMember.role === 'admin') return Promise.resolve();
-  return db.ref(MEMBERS).once('value').then(snap => {
-    const all = snap.val() || {};
-    const hasAdmin = Object.keys(all).some(uid => all[uid] && all[uid].role === 'admin');
-    if (hasAdmin) return;
-    return db.ref(MEMBERS + '/' + currentMember.uid + '/role').set('admin').then(() => {
-      currentMember.role = 'admin';
-      toast('\u2705 You are the admin for this app');
+// The first person to register runs the app, so they are let straight in as
+// the admin. Asking the database "is the member list empty?" needed admin
+// rights to answer, which nobody had yet — the old code deadlocked there. So
+// we simply ask for admin and let the rules refuse if members already exist.
+function claimMembership(user, name, email) {
+  const base = {
+    name: name,
+    email: email || user.email || '',
+    createdAt: Date.now()
+  };
+  return db.ref(MEMBERS + '/' + user.uid)
+    .set(Object.assign({}, base, { approved: true, role: 'admin' }))
+    .catch(() => {
+      console.log('[members] not the first member, joining as pending');
+      return db.ref(MEMBERS + '/' + user.uid)
+        .set(Object.assign({}, base, { approved: false, role: 'user' }));
     });
-  }).catch(err => {
-    // Not being able to check is not a reason to block a signed-in member.
-    console.warn('[members] first-admin check failed', err);
-  });
+}
+
+function claimFirstAdminIfNeeded() {
+  return Promise.resolve();
 }
 
 function isAdminMember() {
@@ -423,7 +438,7 @@ function loadCompaniesForSelect() {
     loading.classList.add('hidden');
     renderCompanySelectList();
   }).catch(err => {
-    loading.textContent = 'Connection error: ' + err.message;
+    loading.textContent = friendlyError(err);
   });
 }
 
@@ -780,7 +795,7 @@ function openDocByKey(key) {
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
     })
-    .catch(err => toast('⚠️ Could not load document: ' + err.message));
+    .catch(err => toast('⚠️ ' + friendlyError(err)));
 }
 
 function uploadPendingDoc(docKey, file) {
@@ -1045,7 +1060,7 @@ function checkPackageDuplicate() {
 }
 function saveInvoice() {
   Promise.resolve().then(() => saveInvoiceInner()).catch(err => {
-    customAlert('⚠️ Save failed with an error:\n\n' + (err && err.message ? err.message : err) + '\n\nPlease screenshot this and send it.');
+    customAlert('⚠️ Could not save.\n\n' + friendlyError(err));
   });
 }
 function customAlert(message) {
@@ -1146,7 +1161,7 @@ async function saveInvoiceInner() {
     return uploadPendingDoc(docKey, file).then(() => {
       currentInvoiceDocs.push({ key: docKey, name: file.name });
     }).catch(err => {
-      uploadErrors.push(file.name + ': ' + err.message);
+      uploadErrors.push(file.name + ': ' + friendlyError(err));
     });
   }));
 
@@ -1166,16 +1181,16 @@ async function saveInvoiceInner() {
       db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + editingInvoiceId).update(data).then(() => {
         toast(uploadErrors.length ? '✅ Invoice updated (some documents not attached)' : '✅ Invoice updated');
         closeInvoiceModal();
-      }).catch(err => toast('Error: ' + err.message));
+      }).catch(err => toast('⚠️ ' + friendlyError(err)));
     } else {
       data.createdAt = Date.now();
       db.ref(ROOT + '/invoices/' + currentCompanyId + '/' + invoiceId).set(data).then(() => {
         toast(uploadErrors.length ? '✅ Invoice saved (some documents not attached)' : '✅ Invoice saved');
         closeInvoiceModal();
-      }).catch(err => toast('Error: ' + err.message));
+      }).catch(err => toast('⚠️ ' + friendlyError(err)));
     }
   }).catch(err => {
-    customAlert('⚠️ Save failed with an error:\n\n' + (err && err.message ? err.message : err) + '\n\nPlease screenshot this and send it.');
+    customAlert('⚠️ Could not save.\n\n' + friendlyError(err));
   });
 }
 function deleteInvoice(id) {
@@ -1272,13 +1287,13 @@ function saveCompany() {
       }
       closeCompanyModal();
       renderSettingsCompanyList();
-    }).catch(err => toast('Error: ' + err.message));
+    }).catch(err => toast('⚠️ ' + friendlyError(err)));
   } else {
     db.ref(ROOT + '/companies').push({ name }).then(() => {
       toast('✅ Company added');
       closeCompanyModal();
       renderSettingsCompanyList();
-    }).catch(err => toast('Error: ' + err.message));
+    }).catch(err => toast('⚠️ ' + friendlyError(err)));
   }
 }
 function deleteCompany(cid, name) {
@@ -1291,7 +1306,7 @@ function deleteCompany(cid, name) {
     db.ref(ROOT + '/invoices/' + cid).remove();
     toast('🗑️ Company deleted');
     renderSettingsCompanyList();
-  }).catch(err => toast('Error: ' + err.message));
+  }).catch(err => toast('⚠️ ' + friendlyError(err)));
 }
 
 /* ====================== SETTINGS: USERS ====================== */
@@ -1406,7 +1421,7 @@ function exportJSONBackup() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast('⬇️ Backup downloaded');
-  }).catch(err => toast('Error: ' + err.message));
+  }).catch(err => toast('⚠️ ' + friendlyError(err)));
 }
 
 /* ====================== REPORTS ====================== */
@@ -1876,7 +1891,7 @@ function exportReportPDF() {
   doc.save((titleMap[currentReportType] || 'report').replace(/\s+/g, '_') + '_' + todayISO() + '.pdf');
   toast('📄 PDF downloaded');
   } catch (err) {
-    toast('⚠️ PDF error: ' + err.message);
+    toast('⚠️ ' + friendlyError(err));
   }
 }
 
@@ -1958,7 +1973,7 @@ function exportReportExcel() {
   XLSX.writeFile(wb, (titleMap[currentReportType] || 'report') + '_' + todayISO() + '.xlsx');
   toast('📊 Excel downloaded');
   } catch (err) {
-    toast('⚠️ Excel error: ' + err.message);
+    toast('⚠️ ' + friendlyError(err));
   }
 }
 
