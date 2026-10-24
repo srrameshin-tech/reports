@@ -433,7 +433,7 @@
         "updatedAt": 1783417176147
       },
       "-Owks4vpepQfQjQXU-Jh": {
-        "addedBy": "Ramesh",
+        "addedBy": "RAMESH",
         "advance": 0,
         "advanceInr": 0,
         "advanceUsd": 0,
@@ -443,6 +443,12 @@
         "createdAt": 1783231438600,
         "customer": "LYCHEE CLOTHING (CLIMATE)",
         "date": "2024-05-16",
+        "docs": [
+          {
+            "key": "-OwAjYxAGawtG18m5sTz/-Owks4vpepQfQjQXU-Jh-1786476215356-0-Screenshot_2026-08-12-00-52-13-94_40deb401b9ffe8e1df2f1cc5ba480b12.jpg",
+            "name": "Screenshot_2026-08-12-00-52-13-94_40deb401b9ffe8e1df2f1cc5ba480b12.jpg"
+          }
+        ],
         "exRate": 0,
         "invNo": "10266-2",
         "notes": "",
@@ -457,10 +463,10 @@
         "total": 16756.2,
         "totalInr": 0,
         "totalUsd": 16756.2,
-        "updatedAt": 1783416625035
+        "updatedAt": 1786476215347
       },
       "-OwksNP5BaYK1hsvCSqa": {
-        "addedBy": "Ramesh",
+        "addedBy": "RAMESH",
         "advance": 0,
         "advanceInr": 0,
         "advanceUsd": 0,
@@ -484,7 +490,7 @@
         "total": 26295,
         "totalInr": 0,
         "totalUsd": 26295,
-        "updatedAt": 1783416488074
+        "updatedAt": 1786476416771
       }
     },
     "-OwAo3hs6w4W8UdWdjkK": {
@@ -677,16 +683,6 @@
         "totalUsd": 17376.3,
         "updatedAt": 1783489416678
       }
-    }
-  },
-  "users": {
-    "-OwMTxfA7UWVRl4lR1uH": {
-      "name": "User 1",
-      "pin": "5678"
-    },
-    "-OwMUAiNA6gvyl1EvUK6": {
-      "name": "Ramesh",
-      "pin": "0101"
     }
   }
 }
